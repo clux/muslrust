@@ -1,6 +1,9 @@
 FROM ubuntu:xenial
 LABEL maintainer="Eirik Albrigtsen <sszynrae@gmail.com>"
 
+ARG USER_ID
+ARG GROUP_ID
+
 # Required packages:
 # - musl-dev, musl-tools - the musl toolchain
 # - curl, g++, make, pkgconf, cmake - for fetching and building third party libs
@@ -33,17 +36,6 @@ RUN apt-get update && apt-get install -y \
   --no-install-recommends && \
   rm -rf /var/lib/apt/lists/*
 
-# Install rust using rustup
-ARG CHANNEL="nightly"
-ENV RUSTUP_VER="1.22.1" \
-    RUST_ARCH="x86_64-unknown-linux-gnu"
-RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init && \
-    chmod +x rustup-init && \
-    ./rustup-init -y --default-toolchain ${CHANNEL} --profile minimal && \
-    rm rustup-init && \
-    ~/.cargo/bin/rustup target add x86_64-unknown-linux-musl && \
-    echo "[build]\ntarget = \"x86_64-unknown-linux-musl\"" > ~/.cargo/config
-
 # Convenience list of versions and variables for compilation later on
 # This helps continuing manually if anything breaks.
 ENV SSL_VER="1.0.2u" \
@@ -53,18 +45,9 @@ ENV SSL_VER="1.0.2u" \
     SQLITE_VER="3320300" \
     CC=musl-gcc \
     PREFIX=/musl \
-    PATH=/usr/local/bin:/root/.cargo/bin:$PATH \
+    PATH=/usr/local/bin:/home/muslrust/.cargo/bin:$PATH \
     PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
     LD_LIBRARY_PATH=$PREFIX
-
-# Set up a prefix for musl build libraries, make the linker's job of finding them easier
-# Primarily for the benefit of postgres.
-# Lastly, link some linux-headers for openssl 1.1 (not used herein)
-RUN mkdir $PREFIX && \
-    echo "$PREFIX/lib" >> /etc/ld-musl-x86_64.path && \
-    ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm && \
-    ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic && \
-    ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
 
 # Build zlib (used in openssl and pq)
 RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
@@ -112,6 +95,44 @@ RUN curl -sSL https://www.sqlite.org/2020/sqlite-autoconf-$SQLITE_VER.tar.gz | t
     ./configure --prefix=$PREFIX --host=x86_64-unknown-linux-musl --enable-threadsafe --enable-dynamic-extensions --disable-shared && \
     make && make install && \
     cd .. && rm -rf sqlite-autoconf-$SQLITE_VER
+
+# Set up a prefix for musl build libraries, make the linker's job of finding them easier
+# Primarily for the benefit of postgres.
+# Lastly, link some linux-headers for openssl 1.1 (not used herein)
+RUN mkdir -p $PREFIX && \
+    echo "$PREFIX/lib" >> /etc/ld-musl-x86_64.path && \
+    ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm && \
+    ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic && \
+    ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
+
+# Setup a non root user (muslrust) that the end-user will be using when calling cargo commands
+# inside the image. This is to try to circumvent the permission issue where the docker image
+# creates files as root.
+# If there is need for a different id than the default one to be used the end-user has to build
+# their own version of the docker image and supply the builds args to update it.
+RUN if [ ${USER_ID:-0} -ne 0 ] && [ ${GROUP_ID:-0} -ne 0 ]; then \
+  groupadd -g ${GROUP_ID} muslrust &&\
+  useradd -m -l -u ${USER_ID} -g muslrust \
+;else \
+  groupadd muslrust &&\
+  useradd -m -l -g muslrust muslrust \
+;fi
+
+USER muslrust
+WORKDIR /home/muslrust
+
+# Install rust using rustup
+ARG CHANNEL="nightly"
+ENV RUSTUP_VER="1.22.1" \
+    RUST_ARCH="x86_64-unknown-linux-gnu"
+RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init && \
+    chmod +x rustup-init && \
+    ./rustup-init -y --default-toolchain ${CHANNEL} --profile minimal && \
+    rm rustup-init && \
+    ~/.cargo/bin/rustup target add x86_64-unknown-linux-musl && \
+    echo "[build]\ntarget = \"x86_64-unknown-linux-musl\"" > ~/.cargo/config
+
+ENV PATH=/usr/local/bin:/home/muslrust/.cargo/bin:$PATH
 
 # SSL cert directories get overridden by --prefix and --openssldir
 # and they do not match the typical host configurations.
