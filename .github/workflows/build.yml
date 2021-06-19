@@ -17,7 +17,7 @@ jobs:
     - uses: 'actions/checkout@v2'
 
     - name: Login to DockerHub
-      #if: github.event_name != 'pull_request'
+      if: github.event_name != 'pull_request'
       uses: docker/login-action@v1
       with:
         username: clux
@@ -28,12 +28,6 @@ jobs:
       run: |
         pip3 install --user toml
         python3 check_stable.py
-
-    - name: Check if we need a new stable
-      shell: bash
-      run: |
-        grep --version
-        bash --version
 
     - name: Build stable image
       uses: docker/build-push-action@v2
@@ -61,6 +55,6 @@ jobs:
       uses: docker/build-push-action@v2
       with:
         context: .
-        #push: ${{ github.event_name != 'pull_request' }}
+        push: ${{ github.event_name != 'pull_request' }}
         push: true
         tags: ${{ env.TAG1 }},${{ env.TAG2 }},${{ env.TAG3 }}
