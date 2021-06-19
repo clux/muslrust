@@ -93,7 +93,8 @@ RUN curl -sSL https://curl.se/download/curl-$CURL_VER.tar.gz | tar xz && \
     cd curl-$CURL_VER && \
     CC="musl-gcc -fPIC -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure \
       --enable-shared=no --with-zlib --enable-static=ssl --enable-optimize --prefix=$PREFIX \
-      --with-ca-path=/etc/ssl/certs/ --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt --without-ca-fallback && \
+      --with-ca-path=/etc/ssl/certs/ --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt --without-ca-fallback \
+      --with-openssl && \
     make -j$(nproc) curl_LDFLAGS="-all-static" && make install && \
     cd .. && rm -rf curl-$CURL_VER
 
