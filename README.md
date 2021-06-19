@@ -33,6 +33,8 @@ From there on, you can include it in a blank docker image, distroless/static, or
 - [4MB blog image (blank image)](https://github.com/clux/blog).
 - [6MB kubernetes controller with actix (distroless/static)](https://github.com/clux/controller-rs)
 
+or you can use it to [embed your no-dependency binary straight into github releases](https://github.com/gleam-lang/gleam/blob/8333cd3a402b920dc774a4d8761ca28ceff09738/.github/workflows/release.yaml) and not have to worry about what libc your users are on.
+
 ## Docker builds
 Latest is always the last built nightly pushed by travis. To pin against specific builds, see the [available tags](https://hub.docker.com/r/clux/muslrust/tags/) on the docker hub.
 

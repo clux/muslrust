@@ -53,7 +53,7 @@ COPY etc/profile.d/cargo.sh /etc/profile.d/cargo.sh
 ENV SSL_VER="1.0.2u" \
     CURL_VER="7.77.0" \
     ZLIB_VER="1.2.11" \
-    PQ_VER="12.7" \
+    PQ_VER="11.12" \
     SQLITE_VER="3350500" \
     CC=musl-gcc \
     PREFIX=/musl \
