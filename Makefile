@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 RUST_CHANNEL="stable"
-#RUST_CHANNEL="nightly-$$(date +"%Y-%m-%d")"
+.SHELLFLAGS := -euo pipefail -c
 
 .PHONY: build run test push
 
@@ -43,4 +43,3 @@ clean: clean-docker clean-lock clean-builds
 
 test: test-plain test-ssl test-pq test-serde test-curl test-zlib test-hyper test-dieselpg test-dieselsqlite
 .PHONY: test-plain test-ssl test-pq test-rocket test-serde test-curl test-zlib test-hyper test-dieselpg test-dieselsqlite
-

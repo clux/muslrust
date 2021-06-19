@@ -34,8 +34,8 @@ RUN apt-get update && apt-get install -y \
   rm -rf /var/lib/apt/lists/*
 
 # Install rust using rustup
-ARG CHANNEL="nightly"
-ENV RUSTUP_VER="1.21.1" \
+ARG CHANNEL="stable"
+ENV RUSTUP_VER="1.24.3" \
     RUST_ARCH="x86_64-unknown-linux-gnu"
 RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init && \
     chmod +x rustup-init && \
@@ -43,6 +43,10 @@ RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}
     rm rustup-init && \
     ~/.cargo/bin/rustup target add x86_64-unknown-linux-musl && \
     echo "[build]\ntarget = \"x86_64-unknown-linux-musl\"" > ~/.cargo/config
+
+# Allow non-root access to cargo
+RUN chmod a+X /root
+COPY etc/profile.d/cargo.sh /etc/profile.d/cargo.sh
 
 # Convenience list of versions and variables for compilation later on
 # This helps continuing manually if anything breaks.

@@ -8,11 +8,13 @@ docker_build() {
     -v "$PWD/test/${crate}:/volume" \
     -v cargo-cache:/root/.cargo/registry \
     -e RUST_BACKTRACE=1 \
-    -it clux/muslrust \
+    clux/muslrust:temp \
     cargo build
   cd "test/${crate}"
   ./target/x86_64-unknown-linux-musl/debug/"${crate}"
-  [[ "$(ldd "target/x86_64-unknown-linux-musl/debug/${crate}")" =~ "not a dynamic" ]] && \
+  LDDRES="$(ldd "target/x86_64-unknown-linux-musl/debug/${crate}")"
+  echo "$LDDRES"
+  echo "$LDDRES" | grep -q "not a dynamic" && \
     echo "${crate} is a static executable"
 }
 
