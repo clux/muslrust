@@ -56,5 +56,4 @@ jobs:
       with:
         context: .
         push: ${{ github.event_name != 'pull_request' }}
-        push: true
         tags: ${{ env.TAG1 }},${{ env.TAG2 }},${{ env.TAG3 }}
