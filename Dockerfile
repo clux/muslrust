@@ -89,7 +89,7 @@ RUN curl -sSL https://www.openssl.org/source/old/1.0.2/openssl-$SSL_VER.tar.gz |
 
 # Build curl (needs with-zlib and all this stuff to allow https)
 # curl_LDFLAGS needed on stretch to avoid fPIC errors - though not sure from what
-RUN curl -sSL https://curl.haxx.se/download/curl-$CURL_VER.tar.gz | tar xz && \
+RUN curl -sSL https://curl.se/download/curl-$CURL_VER.tar.gz | tar xz && \
     cd curl-$CURL_VER && \
     CC="musl-gcc -fPIC -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure \
       --enable-shared=no --with-zlib --enable-static=ssl --enable-optimize --prefix=$PREFIX \
