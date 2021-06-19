@@ -44,9 +44,8 @@ jobs:
         RUST_DATE="$(date +"%Y-%m-%d")"
         RUST_CHANNEL=stable
         echo "TAG1=clux/muslrust:${RUST_CHANNEL}" >> $GITHUB_ENV
-        echo "TAG2=clux/muslrust:${RUST_CHANNEL}-${RUST_DATE}" >> $GITHUB_ENV
-        echo "TAG3=clux/muslrust:${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}" >> $GITHUB_ENV
-        echo "TAG4=clux/muslrust:${RUST_VER}" >> $GITHUB_ENV
+        echo "TAG2=clux/muslrust:${RUST_VER}-${RUST_CHANNEL}" >> $GITHUB_ENV
+        echo "TAG3=clux/muslrust:${RUST_VER}" >> $GITHUB_ENV
 
     - name: Run tests
       shell: bash
@@ -57,4 +56,4 @@ jobs:
       with:
         context: .
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ env.TAG1 }},${{ env.TAG2 }},${{ env.TAG3 }},${{ env.TAG4 }}
+        tags: ${{ env.TAG1 }},${{ env.TAG2 }},${{ env.TAG3 }}
