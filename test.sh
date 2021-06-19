@@ -12,9 +12,7 @@ docker_build() {
     cargo build
   cd "test/${crate}"
   ./target/x86_64-unknown-linux-musl/debug/"${crate}"
-  LDDRES="$(ldd "target/x86_64-unknown-linux-musl/debug/${crate}")"
-  echo "$LDDRES"
-  echo "$LDDRES" | grep -q "not a dynamic" && \
+  ldd "target/x86_64-unknown-linux-musl/debug/${crate}" 2>&1 | grep -q "not a dynamic" && \
     echo "${crate} is a static executable"
 }
 
