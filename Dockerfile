@@ -50,7 +50,7 @@ COPY etc/profile.d/cargo.sh /etc/profile.d/cargo.sh
 
 # Convenience list of versions and variables for compilation later on
 # This helps continuing manually if anything breaks.
-ENV SSL_VER="1.0.2u" \
+ENV SSL_VER="1.1.1i" \
     CURL_VER="7.77.0" \
     ZLIB_VER="1.2.11" \
     PQ_VER="11.12" \
@@ -80,7 +80,7 @@ RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
 # Build openssl (used in curl and pq)
 # Would like to use zlib here, but can't seem to get it to work properly
 # TODO: fix so that it works
-RUN curl -sSL https://www.openssl.org/source/old/1.0.2/openssl-$SSL_VER.tar.gz | tar xz && \
+RUN curl -sSL https://www.openssl.org/source/openssl-$SSL_VER.tar.gz | tar xz && \
     cd openssl-$SSL_VER && \
     ./Configure no-zlib no-shared -fPIC --prefix=$PREFIX --openssldir=$PREFIX/ssl linux-x86_64 && \
     env C_INCLUDE_PATH=$PREFIX/include make depend 2> /dev/null && \
