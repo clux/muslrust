@@ -2,9 +2,9 @@
 authors = ["clux <sszynrae@gmail.com>"]
 name = "hypercrate"
 version = "0.1.0"
+edition = "2018"
 
 [dependencies]
-futures = "0.1.14"
-hyper = "0.11"
-hyper-openssl = "0.3"
-tokio-core = "0.1.8"
+hyper = { version = "0.14", features=["client","http1"] }
+tokio = { version = "1.12.0", features=["macros", "io-std", "io-util"] }
+hyper-tls = "0.5.0"
