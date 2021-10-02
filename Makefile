@@ -16,9 +16,7 @@ test-curl:
 test-serde:
 	./test.sh serde
 test-rocket:
-	if [ -z "$$RUST_CHANNEL" ] || [ "$$RUST_CHANNEL" = "nightly" ]; then \
-		./test.sh rocket; \
-	fi
+	./test.sh rocket
 test-pq:
 	./test.sh pq
 test-dieselpg:

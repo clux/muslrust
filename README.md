@@ -2,8 +2,6 @@
 [![build status](https://secure.travis-ci.org/clux/muslrust.svg)](http://travis-ci.org/clux/muslrust)
 [![docker pulls](https://img.shields.io/docker/pulls/clux/muslrust.svg)](
 https://hub.docker.com/r/clux/muslrust/)
-[![docker image info](https://images.microbadger.com/badges/image/clux/muslrust.svg)](http://microbadger.com/images/clux/muslrust)
-[![docker tag](https://images.microbadger.com/badges/version/clux/muslrust.svg)](https://hub.docker.com/r/clux/muslrust/tags/)
 
 A plain docker environment for building static binaries compiled with rust and linked against musl instead of glibc. Built nightly on travis.
 
@@ -31,7 +29,7 @@ ldd target/x86_64-unknown-linux-musl/debug/EXECUTABLE
 From there on, you can include it in a blank docker image, distroless/static, or alpine (if you absolutely need kubectl exec), and you can end up with say:
 
 - [4MB blog image (blank image)](https://github.com/clux/blog).
-- [6MB kubernetes controller with actix (distroless/static)](https://github.com/clux/controller-rs)
+- [6MB kubernetes controller with actix (distroless/static)](https://github.com/kube-rs/controller-rs)
 
 or you can use it to [embed your no-dependency binary straight into github releases](https://github.com/gleam-lang/gleam/blob/8333cd3a402b920dc774a4d8761ca28ceff09738/.github/workflows/release.yaml) and not have to worry about what libc your users are on.
 
@@ -71,7 +69,7 @@ Before we push a new version of muslrust we ensure that we can use and staticall
 - [x] `openssl`
 - [x] `flate2`
 - [x] `rand`
-- [ ] `rocket` (nightly only - [some gaps](https://github.com/clux/muslrust/issues/32))
+- [ ] `rocket` (waiting for stable release)
 
 ## SSL Verification
 You need to point openssl at the location of your certificates explicitly to have https requests not return certificate errors.
@@ -84,7 +82,7 @@ export SSL_CERT_DIR=/etc/ssl/certs
 You can also hardcode this in your binary, or, more sensibly set it in your running docker image. The [openssl-probe crate](https://crates.io/crates/openssl-probe) can be also be used to detect where these reside.
 
 ## Diesel and PQ builds
-Works without fork now. See the [test/dieselpgcrate](./test/dieselpgcrate) for how to get this working.
+Works with the older version of libpq we bundle (see [#81](https://github.com/clux/muslrust/issues/81)). See the [test/dieselpgcrate](./test/dieselpgcrate) for specifics.
 
 For stuff like `infer_schema!` to work you need to explicitly pass on `-e DATABASE_URL=$DATABASE_URL` to the `docker run`. It's probably easier to just make `diesel print-schema > src/schema.rs` part of your migration setup though.
 
