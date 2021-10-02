@@ -85,7 +85,7 @@ if __name__ == '__main__':
         'CURL': pkgver('curl'),
         'PQ': pkgver('postgresql-old-upgrade'),
         'SQLITE': convert_sqlite_version(pkgver('sqlite')),
-        'SSL': convert_openssl_version(pkgver('openssl-1.0')),
+        'SSL': convert_openssl_version(pkgver('openssl')),
         'ZLIB': pkgver('zlib'),
         'RUSTUP': rustup_version()
     }
