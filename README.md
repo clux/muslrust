@@ -1,5 +1,5 @@
 # muslrust
-[![build status](https://secure.travis-ci.org/clux/muslrust.svg)](http://travis-ci.org/clux/muslrust)
+[![stable](https://github.com/clux/muslrust/actions/workflows/stable.yml/badge.svg)](https://github.com/clux/muslrust/actions/workflows/stable.yml)
 [![docker pulls](https://img.shields.io/docker/pulls/clux/muslrust.svg)](
 https://hub.docker.com/r/clux/muslrust/)
 
