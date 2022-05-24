@@ -83,7 +83,7 @@ def rustup_version():
 if __name__ == '__main__':
     PACKAGES = {
         'CURL': pkgver('curl'),
-        #'PQ': pkgver('postgresql-old-upgrade'), # see https://github.com/clux/muslrust/issues/81
+        'PQ': pkgver('postgresql'),
         'SQLITE': convert_sqlite_version(pkgver('sqlite')),
         'SSL': convert_openssl_version(pkgver('openssl')),
         'ZLIB': pkgver('zlib'),

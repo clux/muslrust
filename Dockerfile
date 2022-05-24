@@ -52,7 +52,7 @@ COPY etc/profile.d/cargo.sh /etc/profile.d/cargo.sh
 ENV SSL_VER="1.1.1o" \
     CURL_VER="7.83.1" \
     ZLIB_VER="1.2.12" \
-    PQ_VER="11.12" \
+    PQ_VER="14.3" \
     SQLITE_VER="3380500" \
     CC=musl-gcc \
     PREFIX=/musl \
@@ -104,6 +104,8 @@ RUN curl -sSL https://ftp.postgresql.org/pub/source/v$PQ_VER/postgresql-$PQ_VER.
     --without-readline \
     --with-openssl \
     --prefix=$PREFIX --host=x86_64-unknown-linux-musl && \
+    cd src/common && make -s -j$(nproc) all && make -s install && cd ../.. && \
+    cd src/port && make -s -j$(nproc) all && make -s install && cd ../.. && \
     cd src/interfaces/libpq make -s -j$(nproc) all-static-lib && make -s install install-lib-static && \
     cd ../../bin/pg_config && make -j $(nproc) && make install && \
     cd .. && rm -rf postgresql-$PQ_VER
@@ -126,11 +128,15 @@ RUN curl -sSL https://www.sqlite.org/2022/sqlite-autoconf-$SQLITE_VER.tar.gz | t
 # It needs the non-musl pg_config to set this up with libpq-dev (depending on libssl-dev)
 # See https://github.com/sgrif/pq-sys/pull/18
 ENV PATH=$PREFIX/bin:$PATH \
+    TARGET=x86_64_unknown_linux_musl \
+    HOST=x86_64_unknown_linux_gnu \
     PKG_CONFIG_ALLOW_CROSS=true \
     PKG_CONFIG_ALL_STATIC=true \
     PQ_LIB_STATIC_X86_64_UNKNOWN_LINUX_MUSL=true \
     PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig \
+    PKG_CONFIG_PATH_X86_64_UNKNOWN_LINUX_MUSL=$PREFIX/lib/pkgconfig \
     PG_CONFIG_X86_64_UNKNOWN_LINUX_GNU=/usr/bin/pg_config \
+    PG_CONFIG_X86_64_UNKNOWN_LINUX_MUSL=/musl/bin/pg_config \
     OPENSSL_STATIC=true \
     OPENSSL_DIR=$PREFIX \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \

@@ -4,5 +4,6 @@ name = "pqcrate"
 version = "0.1.0"
 
 [dependencies]
-pq-sys = "0.4.5"
+#pq-sys = "0.4.5"
+pq-sys = { git = "https://github.com/golddranks/pq-sys.git", rev = "8bc178b2a3859704585f4d4b39d2942c040e350b" }
 openssl = "*"
