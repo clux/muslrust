@@ -35,12 +35,12 @@ RUN apt-get update && apt-get install -y \
 # Install rust using rustup
 ARG CHANNEL
 ENV RUSTUP_VER="1.25.1" \
-    RUST_ARCH="x86_64-unknown-linux-gnu"
+    RUST_ARCH="aarch64-unknown-linux-musl"
 RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init && \
     chmod +x rustup-init && \
     ./rustup-init -y --default-toolchain ${CHANNEL} --profile minimal --no-modify-path && \
     rm rustup-init && \
-    ~/.cargo/bin/rustup target add x86_64-unknown-linux-musl
+    ~/.cargo/bin/rustup target add aarch64-unknown-linux-musl
 
 # Allow non-root access to cargo
 RUN chmod a+X /root
@@ -62,15 +62,15 @@ ENV SSL_VER="1.1.1q" \
 # Primarily for the benefit of postgres.
 # Lastly, link some linux-headers for openssl 1.1 (not used herein)
 RUN mkdir $PREFIX && \
-    echo "$PREFIX/lib" >> /etc/ld-musl-x86_64.path && \
-    ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm && \
-    ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic && \
-    ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
+    echo "$PREFIX/lib" >> /etc/ld-musl-aarch64.path && \
+    ln -s /usr/include/aarch64-linux-gnu/asm /usr/include/aarch64-linux-musl/asm && \
+    ln -s /usr/include/asm-generic /usr/include/aarch64-linux-musl/asm-generic && \
+    ln -s /usr/include/linux /usr/include/aarch64-linux-musl/linux
 
 # Build zlib (used in openssl and pq)
 RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
     cd zlib-$ZLIB_VER && \
-    CC="musl-gcc -fPIC -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure --static --prefix=$PREFIX && \
+    CC="musl-gcc -fPIC -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include -mno-outline-atomics" ./configure --static --prefix=$PREFIX && \
     make -j$(nproc) && make install && \
     cd .. && rm -rf zlib-$ZLIB_VER
 
@@ -79,7 +79,7 @@ RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
 # TODO: fix so that it works
 RUN curl -sSL https://www.openssl.org/source/openssl-$SSL_VER.tar.gz | tar xz && \
     cd openssl-$SSL_VER && \
-    ./Configure no-zlib no-shared -fPIC --prefix=$PREFIX --openssldir=$PREFIX/ssl linux-x86_64 && \
+    CFLAGS="-mno-outline-atomics" ./Configure no-zlib no-shared -fPIC --prefix=$PREFIX --openssldir=$PREFIX/ssl linux-aarch64 && \
     env C_INCLUDE_PATH=$PREFIX/include make depend 2> /dev/null && \
     make -j$(nproc) && make install && \
     cd .. && rm -rf openssl-$SSL_VER
@@ -88,7 +88,7 @@ RUN curl -sSL https://www.openssl.org/source/openssl-$SSL_VER.tar.gz | tar xz &&
 # curl_LDFLAGS needed on stretch to avoid fPIC errors - though not sure from what
 RUN curl -sSL https://curl.se/download/curl-$CURL_VER.tar.gz | tar xz && \
     cd curl-$CURL_VER && \
-    CC="musl-gcc -fPIC -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure \
+    CC="musl-gcc -fPIC -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include -mno-outline-atomics" ./configure \
       --enable-shared=no --with-zlib --enable-static=ssl --enable-optimize --prefix=$PREFIX \
       --with-ca-path=/etc/ssl/certs/ --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt --without-ca-fallback \
       --with-openssl && \
@@ -98,10 +98,10 @@ RUN curl -sSL https://curl.se/download/curl-$CURL_VER.tar.gz | tar xz && \
 # Build libpq
 RUN curl -sSL https://ftp.postgresql.org/pub/source/v$PQ_VER/postgresql-$PQ_VER.tar.gz | tar xz && \
     cd postgresql-$PQ_VER && \
-    CC="musl-gcc -fPIE -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure \
+    CC="musl-gcc -fPIE -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include -mno-outline-atomics" ./configure \
     --without-readline \
     --with-openssl \
-    --prefix=$PREFIX --host=x86_64-unknown-linux-musl && \
+    --prefix=$PREFIX --host=aarch64-unknown-linux-musl && \
     cd src/interfaces/libpq make -s -j$(nproc) all-static-lib && make -s install install-lib-static && \
     cd ../../bin/pg_config && make -j $(nproc) && make install && \
     cd .. && rm -rf postgresql-$PQ_VER
@@ -109,9 +109,9 @@ RUN curl -sSL https://ftp.postgresql.org/pub/source/v$PQ_VER/postgresql-$PQ_VER.
 # Build libsqlite3 using same configuration as the alpine linux main/sqlite package
 RUN curl -sSL https://www.sqlite.org/2022/sqlite-autoconf-$SQLITE_VER.tar.gz | tar xz && \
     cd sqlite-autoconf-$SQLITE_VER && \
-    CFLAGS="-DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_SECURE_DELETE -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_RTREE -DSQLITE_USE_URI -DSQLITE_ENABLE_DBSTAT_VTAB -DSQLITE_ENABLE_JSON1" \
+    CFLAGS="-DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_SECURE_DELETE -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_RTREE -DSQLITE_USE_URI -DSQLITE_ENABLE_DBSTAT_VTAB -DSQLITE_ENABLE_JSON1 -mno-outline-atomics" \
     CC="musl-gcc -fPIC -pie" \
-    ./configure --prefix=$PREFIX --host=x86_64-unknown-linux-musl --enable-threadsafe --enable-dynamic-extensions --disable-shared && \
+    ./configure --prefix=$PREFIX --host=aarch64-unknown-linux-musl --enable-threadsafe --enable-dynamic-extensions --disable-shared && \
     make && make install && \
     cd .. && rm -rf sqlite-autoconf-$SQLITE_VER
 
@@ -125,12 +125,12 @@ RUN curl -sSL https://www.sqlite.org/2022/sqlite-autoconf-$SQLITE_VER.tar.gz | t
 # See https://github.com/sgrif/pq-sys/pull/18
 ENV PATH=/root/.cargo/bin:$PREFIX/bin:$PATH \
     RUSTUP_HOME=/root/.rustup \
-	CARGO_BUILD_TARGET=x86_64-unknown-linux-musl \
+	CARGO_BUILD_TARGET=aarch64-unknown-linux-musl \
     PKG_CONFIG_ALLOW_CROSS=true \
     PKG_CONFIG_ALL_STATIC=true \
-    PQ_LIB_STATIC_X86_64_UNKNOWN_LINUX_MUSL=true \
+    PQ_LIB_STATIC_AARCH64_UNKNOWN_LINUX_MUSL=true \
     PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig \
-    PG_CONFIG_X86_64_UNKNOWN_LINUX_GNU=/usr/bin/pg_config \
+    PG_CONFIG_AARCH64_UNKNOWN_LINUX_GNU=/usr/bin/pg_config \
     OPENSSL_STATIC=true \
     OPENSSL_DIR=$PREFIX \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
