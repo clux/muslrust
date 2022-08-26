@@ -125,7 +125,8 @@ RUN curl -sSL https://www.sqlite.org/2022/sqlite-autoconf-$SQLITE_VER.tar.gz | t
 # See https://github.com/sgrif/pq-sys/pull/18
 ENV PATH=/root/.cargo/bin:$PREFIX/bin:$PATH \
     RUSTUP_HOME=/root/.rustup \
-	CARGO_BUILD_TARGET=aarch64-unknown-linux-musl \
+        CARGO_BUILD_TARGET=aarch64-unknown-linux-musl \
+        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-Clink-self-contained=yes -Clinker=rust-lld -Ctarget-feature=+crt-static" \
     PKG_CONFIG_ALLOW_CROSS=true \
     PKG_CONFIG_ALL_STATIC=true \
     PQ_LIB_STATIC_AARCH64_UNKNOWN_LINUX_MUSL=true \
