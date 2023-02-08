@@ -4,7 +4,7 @@ default:
   @just --list --unsorted --color=always | rg -v "    default"
 
 _build channel:
-	docker build --build-arg CHANNEL="{{channel}}" -t clux/muslrust:temp .
+  docker build --build-arg CHANNEL="{{channel}}" -t clux/muslrust:temp .
 # Build the stable container locally tagged as :temp
 build-stable: (_build "stable")
 # Build the nightly container locally tagged as :temp
@@ -12,7 +12,7 @@ build-nightly: (_build "nightly")
 
 # Shell into the built container
 run:
-	docker run -v $PWD/test:/volume  -w /volume -it clux/muslrust:temp /bin/bash
+  docker run -v $PWD/test:/volume  -w /volume -it clux/muslrust:temp /bin/bash
 
 # Test an individual crate against built containr
 _t crate:

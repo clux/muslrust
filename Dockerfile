@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install rust using rustup
 ARG CHANNEL
-ENV RUSTUP_VER="1.25.1" \
+ENV RUSTUP_VER="1.25.2" \
     RUST_ARCH="x86_64-unknown-linux-gnu"
 RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init && \
     chmod +x rustup-init && \
@@ -50,11 +50,11 @@ RUN chmod a+X /root
 
 # Convenience list of versions and variables for compilation later on
 # This helps continuing manually if anything breaks.
-ENV SSL_VER="1.1.1q" \
-    CURL_VER="7.85.0" \
+ENV SSL_VER="3.0.8" \
+    CURL_VER="7.87.0" \
     ZLIB_VER="1.2.13" \
     PQ_VER="11.12" \
-    SQLITE_VER="3390400" \
+    SQLITE_VER="3400100" \
     CC=musl-gcc \
     PREFIX=/musl \
     PATH=/usr/local/bin:/root/.cargo/bin:$PATH \
@@ -110,7 +110,7 @@ RUN curl -sSL https://ftp.postgresql.org/pub/source/v$PQ_VER/postgresql-$PQ_VER.
     cd .. && rm -rf postgresql-$PQ_VER
 
 # Build libsqlite3 using same configuration as the alpine linux main/sqlite package
-RUN curl -sSL https://www.sqlite.org/2022/sqlite-autoconf-$SQLITE_VER.tar.gz | tar xz && \
+RUN curl -sSL https://www.sqlite.org/2023/sqlite-autoconf-$SQLITE_VER.tar.gz | tar xz && \
     cd sqlite-autoconf-$SQLITE_VER && \
     CFLAGS="-DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_SECURE_DELETE -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_RTREE -DSQLITE_USE_URI -DSQLITE_ENABLE_DBSTAT_VTAB -DSQLITE_ENABLE_JSON1" \
     CC="musl-gcc -fPIC -pie" \
