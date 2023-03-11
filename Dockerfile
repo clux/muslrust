@@ -38,7 +38,9 @@ RUN apt-get update && apt-get install -y \
 # Install rust using rustup
 ARG CHANNEL
 ENV RUSTUP_VER="1.25.2" \
-    RUST_ARCH="x86_64-unknown-linux-gnu"
+    RUST_ARCH="x86_64-unknown-linux-gnu" \
+    CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+
 RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init && \
     chmod +x rustup-init && \
     ./rustup-init -y --default-toolchain ${CHANNEL} --profile minimal --no-modify-path && \
