@@ -1,0 +1,23 @@
+---
+kind: pipeline
+name: amd64
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+
+  - name: prepare repo
+    image: clux/muslrust:1.61.0
+    user: root
+    commands:
+      - git fetch --tags
+      - git submodule init
+      - git submodule update --recursive --remote
+      - chown 1000:1000 . -R
+
+  - name: check with different features
+    image: clux/muslrust:1.61.0
+    commands:
+      - cd test/hypercrate && cargo build

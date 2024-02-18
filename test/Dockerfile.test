@@ -1,0 +1,14 @@
+FROM clux/muslrust:temp as builder
+
+# Test a blank crate
+WORKDIR /
+RUN cargo new --bin api
+WORKDIR /api
+RUN cargo build --release
+
+# Test a particular crate
+ARG CRATE
+COPY ${CRATE} /app
+WORKDIR /app
+RUN ls /app/*
+RUN cargo build --release
