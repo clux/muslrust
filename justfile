@@ -5,7 +5,7 @@ default:
   @just --list --unsorted --color=always
 
 _build channel ar platform ext:
-	docker build --build-arg CHANNEL="{{channel}}" --build-arg AR="{{ar}}" --platform="{{platform}}" -t clux/muslrust:local . -f Dockerfile.{{ext}}
+	docker build --build-arg CHANNEL="{{channel}}" --build-arg AR="{{ar}}" --platform="{{platform}}" -t rustmusl-temp . -f Dockerfile.{{ext}}
 # Build the stable x86 container
 build-stable-amd: (_build "stable" "amd64" "linux/amd64" "x86_64")
 # Build the nightly x86 container
@@ -17,7 +17,7 @@ build-nightly-arm: (_build "nightly" "arm64" "linux/arm64" "arm64")
 
 # Shell into the built container
 run:
-	docker run -v $PWD/test:/volume  -w /volume -it clux/muslrust:local /bin/bash
+	docker run -v $PWD/test:/volume  -w /volume -it rustmusl-temp /bin/bash
 
 test-setup:
     docker build -t test-runner . -f Dockerfile.test-runner

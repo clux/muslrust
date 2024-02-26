@@ -13,7 +13,7 @@ docker_build() {
     -e RUST_BACKTRACE=1 \
     -e AR=ar \
     --platform "${PLATFORM}" \
-    clux/muslrust:local \
+    rustmusl-temp \
     cargo build
 
   cd "test/${crate}"
