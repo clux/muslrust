@@ -23,7 +23,7 @@ test-setup:
     docker build -t test-runner . -f Dockerfile.test-runner
 
 # Test an individual crate against built container
-_t crate
+_t crate:
     ./test.sh {{crate}}
 
 # when running locally use one of these instead of _t
