@@ -23,13 +23,24 @@ test-setup:
     docker build -t test-runner . -f Dockerfile.test-runner
 
 # Test an individual crate against built container
-_t crate:
+_t crate
+    ./test.sh {{crate}}
+
+# when running locally use one of these instead of _t
+_t_amd crate:
     #!/bin/bash
     # TODO: make a variant for arm here, or do platform inference
     export PLATFORM="linux/amd64"
     export TARGET_DIR="x86_64-unknown-linux-musl"
     export AR="amd64"
     ./test.sh {{crate}}
+_t_arm crate:
+    #!/bin/bash
+    export PLATFORM="linux/arm64"
+    export TARGET_DIR="aarch64-unknown-linux-musl"
+    export AR="arm64"
+    ./test.sh {{crate}}
+
 
 # Test all crates against built container
 test: (_t "plain") (_t "ssl") (_t "rustls") (_t "pq") (_t "serde") (_t "curl") (_t "zlib") (_t "hyper") (_t "dieselpg") (_t "dieselsqlite")
