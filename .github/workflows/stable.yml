@@ -34,7 +34,7 @@ jobs:
             arch: arm64
             target_dir: aarch64-unknown-linux-musl
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - uses: extractions/setup-just@v1
 
     - name: Login to DockerHub
@@ -143,7 +143,7 @@ jobs:
     needs:
       - build
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Check if we need a new stable
       id: stablecheck
       shell: bash
