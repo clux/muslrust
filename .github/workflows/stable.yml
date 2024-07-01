@@ -74,7 +74,7 @@ jobs:
 
     - name: Build stable image
       id: build
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         platforms: ${{ matrix.platform }}
