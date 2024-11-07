@@ -194,7 +194,7 @@ COPY . .
 RUN chown 777 -R `pwd` && \
     chown -R $(id -u) . && \
     ln -s /usr/bin/g++ /usr/bin/musl-g++ && \
-    cargp build --target=x86_64-unknown-linux-musl
+    cargo build --target=x86_64-unknown-linux-musl
 ```
 
 ### Filesystem permissions on local builds
