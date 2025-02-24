@@ -1,4 +1,4 @@
-# See https://just.systems/man/
+
 
 [private]
 default:
@@ -24,12 +24,13 @@ test-setup:
 
 # Test an individual crate against built container
 _t crate:
-    ./test.sh {{crate}}
+    just {{ ENVIRON_FN }} {{crate}}
 
+# poor man's environment detection for a man with 2 machines
+ENVIRON_FN := if os() == "macos" { "_t_arm" } else { "_t_amd" }
 # when running locally use one of these instead of _t
 _t_amd crate:
     #!/bin/bash
-    # TODO: make a variant for arm here, or do platform inference
     export PLATFORM="linux/amd64"
     export TARGET_DIR="x86_64-unknown-linux-musl"
     export AR="amd64"
