@@ -1,4 +1,4 @@
-FROM ubuntu:jammy
+FROM ubuntu:noble
 LABEL maintainer="Eirik Albrigtsen <sszynrae@gmail.com>"
 
 # Required packages:
@@ -131,7 +131,7 @@ RUN curl -sSL https://www.sqlite.org/2025/sqlite-autoconf-$SQLITE_VER.tar.gz | t
     cd sqlite-autoconf-$SQLITE_VER && \
     CFLAGS="-DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_SECURE_DELETE -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_RTREE -DSQLITE_USE_URI -DSQLITE_ENABLE_DBSTAT_VTAB -DSQLITE_ENABLE_JSON1" \
     CC="musl-gcc -fPIC -pie" \
-    ./configure --prefix=$PREFIX --host=x86_64-unknown-linux-musl --enable-threadsafe --enable-dynamic-extensions --disable-shared && \
+    ./configure --prefix=$PREFIX --host=x86_64-unknown-linux-musl --enable-threadsafe --disable-shared && \
     make && make install && \
     cd .. && rm -rf sqlite-autoconf-$SQLITE_VER
 
