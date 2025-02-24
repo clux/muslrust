@@ -1,5 +1,4 @@
 
-
 [private]
 default:
   @just --list --unsorted --color=always
@@ -19,33 +18,38 @@ build-nightly-arm: (_build "nightly" "arm64" "linux/arm64" "arm64")
 run:
 	docker run -v $PWD/test:/volume  -w /volume -it rustmusl-temp /bin/bash
 
+# Build test runner
 test-setup:
     docker build -t test-runner . -f Dockerfile.test-runner
 
 # Test an individual crate against built container
 _t crate:
-    just {{ ENVIRON_FN }} {{crate}}
+    ./test.sh {{crate}}
 
-# poor man's environment detection for a man with 2 machines
-ENVIRON_FN := if os() == "macos" { "_t_arm" } else { "_t_amd" }
-# when running locally use one of these instead of _t
-_t_amd crate:
+# Test an individual crate locally using env vars set by _t_amd or t_arm
+_ti crate:
+    # poor man's environment multiplex
+    just _t_{{ os() }}_{{ arch() }} {{crate}}
+
+# when running locally we can use one of these instead of _t
+_t_linux_amd64 crate:
     #!/bin/bash
     export PLATFORM="linux/amd64"
     export TARGET_DIR="x86_64-unknown-linux-musl"
     export AR="amd64"
     ./test.sh {{crate}}
-_t_arm crate:
+_t_macos_aarch64 crate:
     #!/bin/bash
     export PLATFORM="linux/arm64"
     export TARGET_DIR="aarch64-unknown-linux-musl"
     export AR="arm64"
     ./test.sh {{crate}}
 
-
-# Test all crates against built container
+# Test all crates against built container locally
+test: (_ti "plain") (_ti "ssl") (_ti "rustls") (_ti "pq") (_ti "serde") (_ti "zlib") (_ti "hyper") (_ti "dieselpg") (_ti "dieselsqlite")
+# Test all crates against built container in ci (inheriting set PLATFORM/TARGET_DIR/AR vars)
+test-ci: (_t "plain") (_t "ssl") (_t "rustls") (_t "pq") (_t "serde") (_t "zlib") (_t "hyper") (_t "dieselpg") (_t "dieselsqlite")
 # NB: taken out curl for #96 and build issuse
-test: (_t "plain") (_t "ssl") (_t "rustls") (_t "pq") (_t "serde") (_t "zlib") (_t "hyper") (_t "dieselpg") (_t "dieselsqlite")
 
 # Cleanup everything
 clean: clean-docker clean-tests
