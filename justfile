@@ -44,7 +44,8 @@ _t_arm crate:
 
 
 # Test all crates against built container
-test: (_t "plain") (_t "ssl") (_t "rustls") (_t "pq") (_t "serde") (_t "curl") (_t "zlib") (_t "hyper") (_t "dieselpg") (_t "dieselsqlite")
+# NB: taken out curl for #96 and build issuse
+test: (_t "plain") (_t "ssl") (_t "rustls") (_t "pq") (_t "serde") (_t "zlib") (_t "hyper") (_t "dieselpg") (_t "dieselsqlite")
 
 # Cleanup everything
 clean: clean-docker clean-tests
