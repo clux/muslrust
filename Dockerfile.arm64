@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y \
   openssh-client \
   make \
   cmake \
+  ninja-build \
+  golang-go \
   g++ \
   curl \
   pkgconf \
@@ -54,6 +56,7 @@ RUN chmod a+X /root
 # Convenience list of versions and variables for compilation later on
 # This helps continuing manually if anything breaks.
 ENV SSL_VER="1.1.1w" \
+    AWS_LC_VER="1.46.1" \
     ZLIB_VER="1.3.1" \
     PQ_VER="11.12" \
     SQLITE_VER="3490100" \
@@ -77,6 +80,16 @@ RUN curl -sSL https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VE
     mv sccache-v${SCCACHE_VER}-*-unknown-linux-musl/sccache /usr/local/bin/ && \
     chmod +x /usr/local/bin/sccache && \
     rm -rf sccache-v${SCCACHE_VER}-*-unknown-linux-musl
+
+# Build aws-lc (crypto lib used by rustls)
+RUN curl -sSL https://github.com/aws/aws-lc/archive/refs/tags/v${AWS_LC_VER}.tar.gz | tar xz
+RUN mkdir aws-lc-build && cd aws-lc-build && \
+    cmake -GNinja \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_OSX_ARCHITECTURES=aarch64 \
+        -DCMAKE_INSTALL_PREFIX=/musl \
+        ../aws-lc-${AWS_LC_VER} && \
+    ninja-build install
 
 # Set up a prefix for musl build libraries, make the linker's job of finding them easier
 # Primarily for the benefit of postgres.
