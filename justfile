@@ -49,7 +49,6 @@ _t_macos_aarch64 crate:
 test: (_ti "plain") (_ti "ssl") (_ti "rustls") (_ti "pq") (_ti "serde") (_ti "zlib") (_ti "hyper") (_ti "dieselpg") (_ti "dieselsqlite")
 # Test all crates against built container in ci (inheriting set PLATFORM/TARGET_DIR/AR vars)
 test-ci: (_t "plain") (_t "ssl") (_t "rustls") (_t "pq") (_t "serde") (_t "zlib") (_t "hyper") (_t "dieselpg") (_t "dieselsqlite")
-# NB: taken out curl for #96 and build issuse
 
 # Cleanup everything
 clean: clean-docker clean-tests

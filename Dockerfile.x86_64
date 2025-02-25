@@ -53,7 +53,6 @@ RUN chmod a+X /root
 # Convenience list of versions and variables for compilation later on
 # This helps continuing manually if anything breaks.
 ENV SSL_VER="1.1.1w" \
-    CURL_VER="8.12.1" \
     ZLIB_VER="1.3.1" \
     PQ_VER="11.12" \
     SQLITE_VER="3490100" \
@@ -94,7 +93,7 @@ RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
     make -j$(nproc) && make install && \
     cd .. && rm -rf zlib-$ZLIB_VER
 
-# Build openssl (used in curl and pq)
+# Build openssl (used in pq)
 # Would like to use zlib here, but can't seem to get it to work properly
 # TODO: fix so that it works
 RUN curl -sSL https://www.openssl.org/source/openssl-$SSL_VER.tar.gz | tar xz && \
@@ -103,17 +102,6 @@ RUN curl -sSL https://www.openssl.org/source/openssl-$SSL_VER.tar.gz | tar xz &&
     env C_INCLUDE_PATH=$PREFIX/include make depend 2> /dev/null && \
     make -j$(nproc) && make all install_sw && \
     cd .. && rm -rf openssl-$SSL_VER
-
-# Build curl (needs with-zlib and all this stuff to allow https)
-# curl_LDFLAGS needed on stretch to avoid fPIC errors - though not sure from what
-# RUN curl -sSL https://curl.se/download/curl-$CURL_VER.tar.gz | tar xz && \
-    # cd curl-$CURL_VER && \
-    # CC="musl-gcc -fPIC -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure \
-      # --enable-shared=no --with-zlib --enable-static=ssl --enable-optimize --prefix=$PREFIX \
-      # --with-ca-path=/etc/ssl/certs/ --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt --without-ca-fallback \
-      # --with-openssl --without-libpsl && \
-    # make -j$(nproc) curl_LDFLAGS="-all-static" && make install && \
-    # cd .. && rm -rf curl-$CURL_VER
 
 # Build libpq
 RUN curl -sSL https://ftp.postgresql.org/pub/source/v$PQ_VER/postgresql-$PQ_VER.tar.gz | tar xz && \

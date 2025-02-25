@@ -54,9 +54,10 @@ The following system libraries are compiled against `musl-gcc`:
 - [x] pq ([pq-sys crate](https://github.com/sgrif/pq-sys) used by [diesel](https://github.com/diesel-rs/diesel))
 - [x] sqlite3 ([libsqlite3-sys crate](https://github.com/jgallagher/rusqlite/tree/master/libsqlite3-sys) used by [diesel](https://github.com/diesel-rs/diesel))
 - [x] zlib (used by pq and openssl)
-- [~] curl ([curl crate](https://github.com/carllerche/curl-rust)) - dropped [#96](https://github.com/clux/muslrust/issues/96)
 
 We **[try](https://github.com/clux/muslrust/blob/main/update_libs.py)** to keep these up to date.
+
+NB: C library for `curl` has been removed in newer tags from 2025. See [#96](https://github.com/clux/muslrust/issues/96).
 
 ## Developing
 
@@ -79,7 +80,6 @@ Before we push a new version of muslrust we [test](https://github.com/clux/muslr
 - [x] [openssl](https://crates.io/crates/openssl)
 - [x] [flate2](https://crates.io/crates/flate2)
 - [x] [rand](https://crates.io/crates/rand)
-- [~] [curl](https://crates.io/crates/curl) - dropped [#96](https://github.com/clux/muslrust/issues/96)
 
 ## Caching
 

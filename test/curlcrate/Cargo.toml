@@ -1,7 +1,0 @@
-[package]
-authors = ["clux <sszynrae@gmail.com>"]
-name = "curlcrate"
-version = "0.1.0"
-
-[dependencies]
-curl = "*"
