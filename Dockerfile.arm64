@@ -21,8 +21,6 @@ RUN apt-get update && apt-get install -y \
   openssh-client \
   make \
   cmake \
-  ninja-build \
-  golang-go \
   g++ \
   curl \
   pkgconf \
@@ -56,7 +54,6 @@ RUN chmod a+X /root
 # Convenience list of versions and variables for compilation later on
 # This helps continuing manually if anything breaks.
 ENV SSL_VER="1.1.1w" \
-    AWS_LC_VER="1.46.1" \
     ZLIB_VER="1.3.1" \
     PQ_VER="11.12" \
     SQLITE_VER="3490100" \
@@ -89,21 +86,6 @@ RUN mkdir $PREFIX && \
     ln -s /usr/include/aarch64-linux-gnu/asm /usr/include/aarch64-linux-musl/asm && \
     ln -s /usr/include/asm-generic /usr/include/aarch64-linux-musl/asm-generic && \
     ln -s /usr/include/linux /usr/include/aarch64-linux-musl/linux
-
-
-# Build aws-lc (crypto lib used by rustls)
-#RUN curl -sSL https://github.com/aws/aws-lc/archive/refs/tags/v${AWS_LC_VER}.tar.gz | tar xz
-#RUN dpkg-query -L musl-tools && dpkg-query -L musl-dev && false
-#RUN mkdir aws-lc-build && cd aws-lc-build && \
-#    cmake -GNinja \
-#        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-#        -DCMAKE_INSTALL_PREFIX=$PREFIX \
-#        -DBUILD_TESTING=OFF \
-#        -DBUILD_LIBSSL=OFF \
-#        -DBUILD_TOOL=OFF \
-#        -DCMAKE_OSX_ARCHITECTURES=aarch64 \
-#        ../aws-lc-${AWS_LC_VER} && \
-#    ninja install
 
 # Build zlib (used in openssl and pq)
 RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
