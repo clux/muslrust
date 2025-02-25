@@ -5,7 +5,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-hyper = { version = "0.14.18", features = ["client"] }
-hyper-rustls = "0.23.0"
-rustls = "0.22"
-tokio = { version = "1.18.2", features = ["rt-multi-thread", "macros"] }
+http-body-util = "0.1.2"
+hyper = { version = "1.6.0", features = ["client"] }
+hyper-rustls = "0.27.5"
+hyper-util = "0.1.10"
+rustls = "0.23"
+tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros"] }

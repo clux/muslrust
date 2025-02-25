@@ -81,16 +81,6 @@ RUN curl -sSL https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VE
     chmod +x /usr/local/bin/sccache && \
     rm -rf sccache-v${SCCACHE_VER}-*-unknown-linux-musl
 
-# Build aws-lc (crypto lib used by rustls)
-RUN curl -sSL https://github.com/aws/aws-lc/archive/refs/tags/v${AWS_LC_VER}.tar.gz | tar xz
-RUN mkdir aws-lc-build && cd aws-lc-build && \
-    cmake -GNinja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_OSX_ARCHITECTURES=aarch64 \
-        -DCMAKE_INSTALL_PREFIX=/musl \
-        ../aws-lc-${AWS_LC_VER} && \
-    ninja-build install
-
 # Set up a prefix for musl build libraries, make the linker's job of finding them easier
 # Primarily for the benefit of postgres.
 # Lastly, link some linux-headers for openssl 1.1 (not used herein)
@@ -99,6 +89,21 @@ RUN mkdir $PREFIX && \
     ln -s /usr/include/aarch64-linux-gnu/asm /usr/include/aarch64-linux-musl/asm && \
     ln -s /usr/include/asm-generic /usr/include/aarch64-linux-musl/asm-generic && \
     ln -s /usr/include/linux /usr/include/aarch64-linux-musl/linux
+
+
+# Build aws-lc (crypto lib used by rustls)
+#RUN curl -sSL https://github.com/aws/aws-lc/archive/refs/tags/v${AWS_LC_VER}.tar.gz | tar xz
+#RUN dpkg-query -L musl-tools && dpkg-query -L musl-dev && false
+#RUN mkdir aws-lc-build && cd aws-lc-build && \
+#    cmake -GNinja \
+#        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+#        -DCMAKE_INSTALL_PREFIX=$PREFIX \
+#        -DBUILD_TESTING=OFF \
+#        -DBUILD_LIBSSL=OFF \
+#        -DBUILD_TOOL=OFF \
+#        -DCMAKE_OSX_ARCHITECTURES=aarch64 \
+#        ../aws-lc-${AWS_LC_VER} && \
+#    ninja install
 
 # Build zlib (used in openssl and pq)
 RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
