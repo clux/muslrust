@@ -165,6 +165,38 @@ extern crate openssl;
 
 This is true even if you connect without `sslmode=require`.
 
+### ZeroMQ (ZMQ), unrar and some other crates issues with musl-g++
+
+Sometimes, when building Rust projects with the musl environment, one may observe an error:
+
+```
+#10 365.1      Running `/volume/target/release/build/zmq-sys-5a9c7df2068dc61d/build-script-main`
+#10 365.1 The following warnings were emitted during compilation:
+#10 365.1 
+#10 365.1 warning: zmq-sys@0.12.0: Compiler family detection failed due to error: ToolNotFound: Failed to find tool. Is `musl-g++` installed?
+#10 365.1 
+#10 365.1 error: failed to run custom build command for `zmq-sys v0.12.0`
+#10 365.2 
+#10 365.2 Caused by:
+#10 365.2   process didn't exit successfully: `/volume/target/release/build/zmq-sys-5a9c7df2068dc61d/build-script-main` (exit status: 1)
+```
+
+To fix it, simply in your Dockerfile, before building, force the OS to use the `/usr/bin/musl-g++` instead of `/usr/bin/g++`. For example:
+
+```
+# Stage 1: Build the Rust executable
+FROM clux/muslrust as builder
+
+# Copy the source code into the container
+COPY . .
+
+# Build the statically-linked binary
+RUN chown 777 -R `pwd` && \
+    chown -R $(id -u) . && \
+    ln -s /usr/bin/g++ /usr/bin/musl-g++ && \
+    cargo build --target=x86_64-unknown-linux-musl
+```
+
 ### Filesystem permissions on local builds
 
 When building locally, the permissions of the musl parts of the `./target` artifacts dir will be owned by `root` and requires `sudo rm -rf target/` to clear. This is an [intended](https://github.com/clux/muslrust/issues/65) complexity tradeoff with user builds.
