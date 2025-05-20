@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM ubuntu:noble
 LABEL maintainer="Eirik Albrigtsen <sszynrae@gmail.com>"
 
