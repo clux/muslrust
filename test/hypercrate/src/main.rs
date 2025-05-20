@@ -1,26 +1,27 @@
-use hyper_tls::HttpsConnector;
-use hyper::{body::HttpBody as _, Client};
-use tokio::io::{self, AsyncWriteExt as _};
+//- Example from https://docs.rs/hyper-rustls/latest/hyper_rustls/
+use http_body_util::Empty;
+use hyper::body::Bytes;
+use hyper::http::StatusCode;
+use hyper_util::client::legacy::Client;
+use hyper_util::rt::TokioExecutor;
 
-#[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Box<dyn std::error::Error>>{
-    // set SSL_CERT location - see issue #5
-    // normally you'd want to set this in your container
-    // but for plain bin distribution and this test, we set it here
-    std::env::set_var("SSL_CERT_FILE", "/etc/ssl/certs/ca-certificates.crt");
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let url = ("https://raw.githubusercontent.com/clux/muslrust/master/README.md")
+        .parse()
+        .unwrap();
 
-    let url = "https://raw.githubusercontent.com/clux/muslrust/master/README.md";
+    let https = hyper_rustls::HttpsConnectorBuilder::new()
+        .with_native_roots()
+        .expect("no native root CA certificates found")
+        .https_only()
+        .enable_http1()
+        .build();
 
-    let https = HttpsConnector::new();
-    let client = Client::builder().build::<_, hyper::Body>(https);
+    let client: Client<_, Empty<Bytes>> = Client::builder(TokioExecutor::new()).build(https);
 
-    let mut res = client.get(url.parse()?).await?;
-    assert_eq!(res.status(), 200);
-
-    while let Some(next) = res.data().await {
-        let chunk = next?;
-        io::stdout().write_all(&chunk).await?;
-    }
+    let res = client.get(url).await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
 
     Ok(())
 }

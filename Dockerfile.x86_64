@@ -5,8 +5,6 @@ LABEL maintainer="Eirik Albrigtsen <sszynrae@gmail.com>"
 # - musl-dev, musl-tools - the musl toolchain
 # - curl, g++, make, pkgconf, cmake - for fetching and building third party libs
 # - ca-certificates - openssl + curl + peer verification of downloads
-# - xutils-dev - for openssl makedepend
-# - libssl-dev and libpq-dev - for dynamic linking during diesel_codegen build process
 # - git - cargo builds in user projects
 # - linux-headers-amd64 - needed for building openssl 1.1 (stretch only)
 # - file - needed by rustup.sh install
@@ -24,9 +22,6 @@ RUN apt-get update && apt-get install -y \
   curl \
   pkgconf \
   ca-certificates \
-  xutils-dev \
-  libssl-dev \
-  libpq-dev \
   automake \
   autoconf \
   libtool \
@@ -52,9 +47,7 @@ RUN chmod a+X /root
 
 # Convenience list of versions and variables for compilation later on
 # This helps continuing manually if anything breaks.
-ENV SSL_VER="1.1.1w" \
-    ZLIB_VER="1.3.1" \
-    PQ_VER="11.12" \
+ENV ZLIB_VER="1.3.1" \
     SQLITE_VER="3490100" \
     PROTOBUF_VER="29.2" \
     SCCACHE_VER="0.9.1" \
@@ -86,33 +79,12 @@ RUN mkdir $PREFIX && \
     ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic && \
     ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
 
-# Build zlib (used in openssl and pq)
+# Build zlib (used in pq)
 RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
     cd zlib-$ZLIB_VER && \
     CC="musl-gcc -fPIC -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure --static --prefix=$PREFIX && \
     make -j$(nproc) && make install && \
     cd .. && rm -rf zlib-$ZLIB_VER
-
-# Build openssl (used in pq)
-# Would like to use zlib here, but can't seem to get it to work properly
-# TODO: fix so that it works
-RUN curl -sSL https://www.openssl.org/source/openssl-$SSL_VER.tar.gz | tar xz && \
-    cd openssl-$SSL_VER && \
-    ./Configure no-zlib no-shared -fPIC --prefix=$PREFIX --openssldir=$PREFIX/ssl linux-x86_64 && \
-    env C_INCLUDE_PATH=$PREFIX/include make depend 2> /dev/null && \
-    make -j$(nproc) && make all install_sw && \
-    cd .. && rm -rf openssl-$SSL_VER
-
-# Build libpq
-RUN curl -sSL https://ftp.postgresql.org/pub/source/v$PQ_VER/postgresql-$PQ_VER.tar.gz | tar xz && \
-    cd postgresql-$PQ_VER && \
-    CC="musl-gcc -fPIE -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure \
-    --without-readline \
-    --with-openssl \
-    --prefix=$PREFIX --host=x86_64-unknown-linux-musl && \
-    cd src/interfaces/libpq make -s -j$(nproc) all-static-lib && make -s install install-lib-static && \
-    cd ../../bin/pg_config && make -j $(nproc) && make install && \
-    cd .. && rm -rf postgresql-$PQ_VER
 
 # Build libsqlite3 using same configuration as the alpine linux main/sqlite package
 RUN curl -sSL https://www.sqlite.org/2025/sqlite-autoconf-$SQLITE_VER.tar.gz | tar xz && \
@@ -136,11 +108,8 @@ ENV PATH=/root/.cargo/bin:$PREFIX/bin:$PATH \
     CARGO_BUILD_TARGET=x86_64-unknown-linux-musl \
     PKG_CONFIG_ALLOW_CROSS=true \
     PKG_CONFIG_ALL_STATIC=true \
-    PQ_LIB_STATIC_X86_64_UNKNOWN_LINUX_MUSL=true \
     PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig \
     PG_CONFIG_X86_64_UNKNOWN_LINUX_GNU=/usr/bin/pg_config \
-    OPENSSL_STATIC=true \
-    OPENSSL_DIR=$PREFIX \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     SSL_CERT_DIR=/etc/ssl/certs \
     LIBZ_SYS_STATIC=1 \

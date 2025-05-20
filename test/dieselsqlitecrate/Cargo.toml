@@ -4,4 +4,4 @@ name = "dieselsqlitecrate"
 version = "0.1.0"
 
 [dependencies]
-diesel = { version = "2.1.*", features = ["sqlite"] }
+diesel = { version = "2.2.*", features = ["sqlite"] }

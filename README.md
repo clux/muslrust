@@ -50,14 +50,15 @@ For pinned, or historical builds, see the [available tags on dockerhub](https://
 
 The following system libraries are compiled against `musl-gcc`:
 
-- [x] openssl ([openssl crate](https://github.com/sfackler/rust-openssl))
-- [x] pq ([pq-sys crate](https://github.com/sgrif/pq-sys) used by [diesel](https://github.com/diesel-rs/diesel))
 - [x] sqlite3 ([libsqlite3-sys crate](https://github.com/jgallagher/rusqlite/tree/master/libsqlite3-sys) used by [diesel](https://github.com/diesel-rs/diesel))
-- [x] zlib (used by pq and openssl)
+- [x] zlib
 
 We **[try](https://github.com/clux/muslrust/blob/main/update_libs.py)** to keep these up to date.
 
-NB: C library for `curl` has been removed in newer tags from 2025. See [#96](https://github.com/clux/muslrust/issues/96).
+Removed Libraries;
+- `openssl` has been removed in 2025. See [#153](https://github.com/clux/muslrust/issues/153).
+- `curl` has been removed in 2025. See [#96](https://github.com/clux/muslrust/issues/96).
+- `pq` has been removed in 2025. See [#81](https://github.com/clux/muslrust/issues/81)
 
 ## Developing
 
@@ -77,7 +78,6 @@ Before we push a new version of muslrust we [test](https://github.com/clux/muslr
 - [x] [diesel](https://crates.io/crates/diesel)
 - [x] [hyper](https://crates.io/crates/hyper)
 - [x] [rustls](https://crates.io/crates/rustls)
-- [x] [openssl](https://crates.io/crates/openssl)
 - [x] [flate2](https://crates.io/crates/flate2)
 - [x] [rand](https://crates.io/crates/rand)
 
@@ -138,17 +138,6 @@ static GLOBAL: Jemalloc = Jemalloc;
 ```
 
 ## Troubleshooting
-
-### SSL Verification
-
-You might need to point `openssl` at the location of your certificates **explicitly** to avoid certificate errors on https requests.
-
-```sh
-export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-export SSL_CERT_DIR=/etc/ssl/certs
-```
-
-These can be [hardcoded in your Dockerfile](https://docs.docker.com/engine/reference/builder/#env), or you can rely on the [openssl-probe crate](https://crates.io/crates/openssl-probe) to detect the cert location. You should not have to do this if you are using the static variants of `distroless` or `chainguard`.
 
 ### Diesel and PQ builds
 
