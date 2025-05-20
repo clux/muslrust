@@ -22,16 +22,6 @@ import os
 import re
 
 
-def convert_openssl_version(version):
-    """Convert OpenSSL package versions to match upstream's format
-
-    >>> convert_openssl_version('1.0.2.o')
-    '1.0.2o'
-    """
-
-    return re.sub(r'(.+)\.([a-z])', r'\1\2', version)
-
-
 def convert_sqlite_version(version):
     """Convert SQLite package versions to match upstream's format
 
@@ -82,9 +72,7 @@ def rustup_version():
 
 if __name__ == '__main__':
     PACKAGES = {
-        #'PQ': pkgver('postgresql-old-upgrade'), # see https://github.com/clux/muslrust/issues/81
         'SQLITE': convert_sqlite_version(pkgver('sqlite')),
-        'SSL': convert_openssl_version(pkgver('openssl-1.1')),
         'SCCACHE': pkgver('sccache'),
         'PROTOBUF': pkgver('protobuf'),
         'ZLIB': pkgver('zlib'),

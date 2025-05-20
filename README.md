@@ -4,13 +4,13 @@
 [![stable](https://github.com/clux/muslrust/actions/workflows/stable.yml/badge.svg)](https://github.com/clux/muslrust/actions/workflows/stable.yml)
 [![docker pulls](https://img.shields.io/docker/pulls/clux/muslrust.svg)](https://hub.docker.com/r/clux/muslrust/tags)
 
-A docker environment for building **static** rust binaries for `x86_64` and `arm64` **linux** environments using **[musl](https://musl.libc.org/)**. Built daily via [github actions](https://github.com/clux/muslrust/actions).
+A docker environment for building **static** rust binaries for `x86_64` and `arm64` environments using **[musl](https://musl.libc.org/)**. Built daily via [github actions](https://github.com/clux/muslrust/actions).
 
-Binaries compiled with `muslrust` are **light-weight**, call straight into the kernel without other dynamic system library dependencies, can be shipped to most linux distributions without compatibility issues, and can be inserted as-is into lightweight docker images such as [static distroless](https://github.com/GoogleContainerTools/distroless/blob/main/base/README.md), [scratch](https://hub.docker.com/_/scratch), or [alpine](https://hub.docker.com/_/alpine).
+Binaries compiled with `muslrust` are **light-weight**, call straight into the kernel without other dynamic system library dependencies, can be shipped to most  distributions without compatibility issues, and can be inserted as-is into lightweight docker images such as [static distroless](https://github.com/GoogleContainerTools/distroless/blob/main/base/README.md), [scratch](https://hub.docker.com/_/scratch), or [alpine](https://hub.docker.com/_/alpine).
 
 The goal is to **simplify** the creation of small and **efficient cloud containers**, or **stand-alone linux binary releases**.
 
-This image includes popular [C libraries](#c-libraries) compiled with `musl-gcc`, enabling static builds even when these libraries are used.
+This image includes some hard-to-avoid [C libraries](#c-libraries) compiled with `musl-gcc`, enabling static builds even when these libraries are used.
 
 ## Usage
 
@@ -50,14 +50,20 @@ For pinned, or historical builds, see the [available tags on dockerhub](https://
 
 The following system libraries are compiled against `musl-gcc`:
 
-- [x] openssl ([openssl crate](https://github.com/sfackler/rust-openssl))
-- [x] pq ([pq-sys crate](https://github.com/sgrif/pq-sys) used by [diesel](https://github.com/diesel-rs/diesel))
-- [x] sqlite3 ([libsqlite3-sys crate](https://github.com/jgallagher/rusqlite/tree/master/libsqlite3-sys) used by [diesel](https://github.com/diesel-rs/diesel))
-- [x] zlib (used by pq and openssl)
+- sqlite3 ([libsqlite3-sys crate](https://github.com/jgallagher/rusqlite/tree/master/libsqlite3-sys) used by [diesel](https://github.com/diesel-rs/diesel))
+- zlib
 
-We **[try](https://github.com/clux/muslrust/blob/main/update_libs.py)** to keep these up to date.
+Note that these libraries **may be removed** if sensible and popular Rust crates can replace them in the future.
 
-NB: C library for `curl` has been removed in newer tags from 2025. See [#96](https://github.com/clux/muslrust/issues/96).
+In the mean time, we **[try](https://github.com/clux/muslrust/blob/main/update_libs.py)** to keep these up to date.
+
+Removed Libraries;
+
+- `openssl` has been removed in 2025. See [#153](https://github.com/clux/muslrust/issues/153).
+- `curl` has been removed in 2025. See [#96](https://github.com/clux/muslrust/issues/96).
+- `pq` has been removed in 2025. See [#81](https://github.com/clux/muslrust/issues/81)
+
+Consider [blackdex/rust-musl](https://github.com/BlackDex/rust-musl) for `openssl`, `curl` and `pq`.
 
 ## Developing
 
@@ -74,10 +80,9 @@ just test
 Before we push a new version of muslrust we [test](https://github.com/clux/muslrust/blob/main/test.sh#L4-L17) to ensure that we can use and statically link:
 
 - [x] [serde](https://crates.io/crates/serde)
-- [x] [diesel](https://crates.io/crates/diesel)
-- [x] [hyper](https://crates.io/crates/hyper)
+- [x] [diesel](https://crates.io/crates/diesel) (using sqlite)
 - [x] [rustls](https://crates.io/crates/rustls)
-- [x] [openssl](https://crates.io/crates/openssl)
+- [x] [hyper](https://crates.io/crates/hyper) (using hyper-rustls and rustls's default crypto backend)
 - [x] [flate2](https://crates.io/crates/flate2)
 - [x] [rand](https://crates.io/crates/rand)
 
@@ -138,32 +143,6 @@ static GLOBAL: Jemalloc = Jemalloc;
 ```
 
 ## Troubleshooting
-
-### SSL Verification
-
-You might need to point `openssl` at the location of your certificates **explicitly** to avoid certificate errors on https requests.
-
-```sh
-export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-export SSL_CERT_DIR=/etc/ssl/certs
-```
-
-These can be [hardcoded in your Dockerfile](https://docs.docker.com/engine/reference/builder/#env), or you can rely on the [openssl-probe crate](https://crates.io/crates/openssl-probe) to detect the cert location. You should not have to do this if you are using the static variants of `distroless` or `chainguard`.
-
-### Diesel and PQ builds
-
-Works with the older version of libpq we bundle (see [#81](https://github.com/clux/muslrust/issues/81)). See the [test/dieselpgcrate](./test/dieselpgcrate) for specifics.
-
-For stuff like `infer_schema!` to work you need to explicitly pass on `-e DATABASE_URL=$DATABASE_URL` to the `docker run`. It's probably easier to just make `diesel print-schema > src/schema.rs` part of your migration setup though.
-
-Note that diesel compiles with `openssl` statically since `1.34.0`, so you need to include the `openssl` crate **before** `diesel` due to [pq-sys#25](https://github.com/sgrif/pq-sys/issues/25):
-
-```rs
-extern crate openssl;
-#[macro_use] extern crate diesel;
-```
-
-This is true even if you connect without `sslmode=require`.
 
 ### Filesystem permissions on local builds
 

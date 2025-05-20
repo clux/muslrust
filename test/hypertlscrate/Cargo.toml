@@ -1,0 +1,12 @@
+[package]
+authors = ["clux <sszynrae@gmail.com>"]
+name = "hypertlscrate"
+version = "0.2.0"
+edition = "2024"
+
+[dependencies]
+hyper = { version = "1.6", features=["client", "http1"] }
+tokio = { version = "1.45.0", features=["macros", "io-std", "io-util", "rt-multi-thread"] }
+hyper-rustls = "0.27.5"
+http-body-util = "0.1.3"
+hyper-util = "0.1.12"

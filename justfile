@@ -32,7 +32,7 @@ _ti crate:
     just _t_{{ os() }}_{{ arch() }} {{crate}}
 
 # when running locally we can use one of these instead of _t
-_t_linux_amd64 crate:
+_t_linux_x86_64 crate:
     #!/bin/bash
     export PLATFORM="linux/amd64"
     export TARGET_DIR="x86_64-unknown-linux-musl"
@@ -46,9 +46,9 @@ _t_macos_aarch64 crate:
     ./test.sh {{crate}}
 
 # Test all crates against built container locally
-test: (_ti "plain") (_ti "ssl") (_ti "rustls") (_ti "pq") (_ti "serde") (_ti "zlib") (_ti "hyper") (_ti "dieselpg") (_ti "dieselsqlite")
+test: (_ti "plain") (_ti "serde") (_ti "zlib") (_ti "hypertls") (_ti "dieselsqlite")
 # Test all crates against built container in ci (inheriting set PLATFORM/TARGET_DIR/AR vars)
-test-ci: (_t "plain") (_t "ssl") (_t "rustls") (_t "pq") (_t "serde") (_t "zlib") (_t "hyper") (_t "dieselpg") (_t "dieselsqlite")
+test-ci: (_t "plain") (_t "serde") (_t "zlib") (_t "hypertls") (_t "dieselsqlite")
 
 # Cleanup everything
 clean: clean-docker clean-tests

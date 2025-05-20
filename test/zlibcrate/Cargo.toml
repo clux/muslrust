@@ -2,6 +2,7 @@
 authors = ["clux <sszynrae@gmail.com>"]
 name = "zlibcrate"
 version = "0.1.0"
+edition = "2024"
 
 [dependencies]
 flate2 = "*"
