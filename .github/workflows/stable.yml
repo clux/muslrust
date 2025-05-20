@@ -192,4 +192,9 @@ jobs:
           docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:$tag \
             ${{ env.REGISTRY_IMAGE }}:amd64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE} \
             ${{ env.REGISTRY_IMAGE }}:arm64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}
-       docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:latest
+          done
+
+    - name: Inspect image
+      if: ${{ steps.stablecheck.outputs.BUILD }}
+      run: |
+        docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:latest
