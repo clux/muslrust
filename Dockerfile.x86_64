@@ -7,7 +7,6 @@ LABEL maintainer="Eirik Albrigtsen <sszynrae@gmail.com>"
 # - curl, g++, make, pkgconf, cmake - for fetching and building third party libs
 # - ca-certificates - openssl + curl + peer verification of downloads
 # - git - cargo builds in user projects
-# - linux-headers-amd64 - needed for building openssl 1.1 (stretch only)
 # - file - needed by rustup.sh install
 # - automake autoconf libtool - support crates building C deps as part cargo build
 # NB: does not include cmake atm
@@ -71,15 +70,6 @@ RUN curl -sSL https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VE
     chmod +x /usr/local/bin/sccache && \
     rm -rf sccache-v${SCCACHE_VER}-*-unknown-linux-musl
 
-# Set up a prefix for musl build libraries, make the linker's job of finding them easier
-# Primarily for the benefit of postgres.
-# Lastly, link some linux-headers for openssl 1.1 (not used herein)
-RUN mkdir $PREFIX && \
-    echo "$PREFIX/lib" >> /etc/ld-musl-x86_64.path && \
-    ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm && \
-    ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic && \
-    ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
-
 # Build zlib (used in pq)
 RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
     cd zlib-$ZLIB_VER && \
@@ -96,14 +86,6 @@ RUN curl -sSL https://www.sqlite.org/2025/sqlite-autoconf-$SQLITE_VER.tar.gz | t
     make && make install && \
     cd .. && rm -rf sqlite-autoconf-$SQLITE_VER
 
-# SSL cert directories get overridden by --prefix and --openssldir
-# and they do not match the typical host configurations.
-# The SSL_CERT_* vars fix this, but only when inside this container
-# musl-compiled binary must point SSL at the correct certs (muslrust/issues/5) elsewhere
-# Postgres bindings need vars so that diesel_codegen.so uses the GNU deps at build time
-# but finally links with the static libpq.a at the end.
-# It needs the non-musl pg_config to set this up with libpq-dev (depending on libssl-dev)
-# See https://github.com/sgrif/pq-sys/pull/18
 ENV PATH=/root/.cargo/bin:$PREFIX/bin:$PATH \
     RUSTUP_HOME=/root/.rustup \
     CARGO_BUILD_TARGET=x86_64-unknown-linux-musl \
@@ -111,8 +93,6 @@ ENV PATH=/root/.cargo/bin:$PREFIX/bin:$PATH \
     PKG_CONFIG_ALL_STATIC=true \
     PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig \
     PG_CONFIG_X86_64_UNKNOWN_LINUX_GNU=/usr/bin/pg_config \
-    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    SSL_CERT_DIR=/etc/ssl/certs \
     LIBZ_SYS_STATIC=1 \
     DEBIAN_FRONTEND=noninteractive \
     TZ=Etc/UTC
