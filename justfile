@@ -3,16 +3,16 @@
 default:
   @just --list --unsorted --color=always
 
-_build channel ar platform ext:
-	docker build --build-arg CHANNEL="{{channel}}" --build-arg AR="{{ar}}" --platform="{{platform}}" -t rustmusl-temp . -f Dockerfile.{{ext}}
+_build channel platform aarch:
+	docker build --build-arg CHANNEL="{{channel}}" --build-arg AARCH="{{aarch}}" --platform="{{platform}}" -t rustmusl-temp . -f Dockerfile
 # Build the stable x86 container
-build-stable-amd: (_build "stable" "amd64" "linux/amd64" "x86_64")
+build-stable-amd: (_build "stable" "linux/amd64" "x86_64")
 # Build the nightly x86 container
-build-nightly-amd: (_build "nightly" "amd64" "linux/amd64" "x86_64")
+build-nightly-amd: (_build "nightly" "linux/amd64" "x86_64")
 # Build the stable arm container
-build-stable-arm: (_build "stable" "arm64" "linux/arm64" "arm64")
+build-stable-arm: (_build "stable" "linux/arm64" "aarch64")
 # Build the nightly arm container
-build-nightly-arm: (_build "nightly" "arm64" "linux/arm64" "arm64")
+build-nightly-arm: (_build "nightly" "linux/arm64" "aarch64")
 
 # Shell into the built container
 run:
@@ -36,13 +36,11 @@ _t_linux_x86_64 crate:
     #!/bin/bash
     export PLATFORM="linux/amd64"
     export TARGET_DIR="x86_64-unknown-linux-musl"
-    export AR="amd64"
     ./test.sh {{crate}}
 _t_macos_aarch64 crate:
     #!/bin/bash
     export PLATFORM="linux/arm64"
     export TARGET_DIR="aarch64-unknown-linux-musl"
-    export AR="arm64"
     ./test.sh {{crate}}
 
 # Test all crates against built container locally

@@ -26,12 +26,14 @@ jobs:
         platform: [linux/amd64, linux/arm64]
         include:
           - platform: linux/amd64
-            dockerfile: Dockerfile.x86_64
+            dockerfile: Dockerfile
             arch: amd64
+            aarch: x86_64
             target_dir: x86_64-unknown-linux-musl
           - platform: linux/arm64
-            dockerfile: Dockerfile.arm64
+            dockerfile: Dockerfile
             arch: arm64
+            aarch: aarch64
             target_dir: aarch64-unknown-linux-musl
     steps:
     - uses: actions/checkout@v4
@@ -85,6 +87,7 @@ jobs:
         tags: rustmusl-temp
         build-args: |
           CHANNEL=stable
+          AARCH=${{ matrix.aarch }}
       if: ${{ steps.stablecheck.outputs.BUILD }}
 
     - name: Run tests
@@ -189,9 +192,4 @@ jobs:
           docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:$tag \
             ${{ env.REGISTRY_IMAGE }}:amd64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE} \
             ${{ env.REGISTRY_IMAGE }}:arm64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}
-          done
-
-    - name: Inspect image
-      if: ${{ steps.stablecheck.outputs.BUILD }}
-      run: |
-        docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:latest
+       docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:latest
