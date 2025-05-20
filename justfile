@@ -46,9 +46,9 @@ _t_macos_aarch64 crate:
     ./test.sh {{crate}}
 
 # Test all crates against built container locally
-test: (_ti "plain") (_ti "rustls") (_ti "serde") (_ti "zlib") (_ti "hyper") (_ti "dieselsqlite")
+test: (_ti "plain") (_ti "serde") (_ti "zlib") (_ti "hypertls") (_ti "dieselsqlite")
 # Test all crates against built container in ci (inheriting set PLATFORM/TARGET_DIR/AR vars)
-test-ci: (_t "plain") (_t "rustls") (_t "serde") (_t "zlib") (_t "hyper") (_t "dieselsqlite")
+test-ci: (_t "plain") (_t "serde") (_t "zlib") (_t "hypertls") (_t "dieselsqlite")
 
 # Cleanup everything
 clean: clean-docker clean-tests
