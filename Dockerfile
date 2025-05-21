@@ -66,7 +66,7 @@ ENV ZLIB_VER="1.3.1" \
 
 # Install a more recent release of protoc (protobuf-compiler in jammy is 4 years old and misses some features)
 RUN cd /tmp && \
-    curl -sSL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VER}/protoc-${PROTOBUF_VER}-linux-$([ "$AARCH" = "aarch64"] && echo "aarch_64" || echo "$AARCH").zip -o protoc.zip && \
+    curl -sSL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VER}/protoc-${PROTOBUF_VER}-linux-$([ "$AARCH" = "aarch64" ] && echo "aarch_64" || echo "$AARCH").zip -o protoc.zip && \
     unzip protoc.zip && \
     cp bin/protoc /usr/bin/protoc && \
     rm -rf *
