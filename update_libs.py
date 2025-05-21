@@ -84,20 +84,19 @@ if __name__ == '__main__':
         print('{}_VER="{}"'.format(prefix, PACKAGES[prefix]))
 
     # Update Dockerfiles
-    for arch in ["x86_64", "arm64"]:
-        fname = f'./Dockerfile.{arch}'
-        # Open a different file for the destination to update Dockerfile atomically
-        src = open(fname, 'r')
-        dst = open(f'{fname}.new', 'w')
+    fname = './Dockerfile'
+    # Open a different file for the destination to update Dockerfile atomically
+    src = open(fname, 'r')
+    dst = open(f'{fname}.new', 'w')
 
-        # Iterate over each line in Dockerfile, replacing any *_VER variables with the most recent version
-        for line in src:
-            for prefix in PACKAGES:
-                version = PACKAGES[prefix]
-                line = re.sub(r'({}_VER=)\S+'.format(prefix), r'\1"{}"'.format(version), line)
-            dst.write(line)
+    # Iterate over each line in Dockerfile, replacing any *_VER variables with the most recent version
+    for line in src:
+        for prefix in PACKAGES:
+            version = PACKAGES[prefix]
+            line = re.sub(r'({}_VER=)\S+'.format(prefix), r'\1"{}"'.format(version), line)
+        dst.write(line)
 
-        # Close original and new Dockerfile then overwrite the old with the new
-        src.close()
-        dst.close()
-        os.rename(f'{fname}.new', fname)
+    # Close original and new Dockerfile then overwrite the old with the new
+    src.close()
+    dst.close()
+    os.rename(f'{fname}.new', fname)

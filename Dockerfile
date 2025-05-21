@@ -39,7 +39,7 @@ RUN apt-get update && apt-get install -y \
 ARG AARCH
 # Install rust using rustup
 ARG CHANNEL
-ENV RUSTUP_VER="1.27.1" \
+ENV RUSTUP_VER="1.28.2" \
     RUST_ARCH="${AARCH}-unknown-linux-gnu" \
     CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
@@ -55,9 +55,9 @@ RUN chmod a+X /root
 # Convenience list of versions and variables for compilation later on
 # This helps continuing manually if anything breaks.
 ENV ZLIB_VER="1.3.1" \
-    SQLITE_VER="3490100" \
+    SQLITE_VER="3490200" \
     PROTOBUF_VER="31.0" \
-    SCCACHE_VER="0.9.1" \
+    SCCACHE_VER="0.10.0" \
     CC=musl-gcc \
     PREFIX=/musl \
     PATH=/usr/local/bin:/root/.cargo/bin:$PATH \
