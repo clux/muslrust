@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y \
   --no-install-recommends && \
   rm -rf /var/lib/apt/lists/*
 
+# Common arg for arch used in urls and triples
 ARG AARCH
 # Install rust using rustup
 ARG CHANNEL
@@ -55,7 +56,7 @@ RUN chmod a+X /root
 # This helps continuing manually if anything breaks.
 ENV ZLIB_VER="1.3.1" \
     SQLITE_VER="3490100" \
-    PROTOBUF_VER="29.2" \
+    PROTOBUF_VER="31.0" \
     SCCACHE_VER="0.9.1" \
     CC=musl-gcc \
     PREFIX=/musl \
@@ -65,7 +66,7 @@ ENV ZLIB_VER="1.3.1" \
 
 # Install a more recent release of protoc (protobuf-compiler in jammy is 4 years old and misses some features)
 RUN cd /tmp && \
-    curl -sSL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VER}/protoc-${PROTOBUF_VER}-linux-${AARCH}.zip -o protoc.zip && \
+    curl -sSL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VER}/protoc-${PROTOBUF_VER}-linux-$([ "$AARCH" = "aarch64"] && echo "aarch_64" || echo "$AARCH").zip -o protoc.zip && \
     unzip protoc.zip && \
     cp bin/protoc /usr/bin/protoc && \
     rm -rf *
@@ -76,7 +77,7 @@ RUN curl -sSL https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VE
     chmod +x /usr/local/bin/sccache && \
     rm -rf sccache-v${SCCACHE_VER}-*-unknown-linux-musl
 
-# Build zlib (used in pq)
+# Build zlib
 RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
     cd zlib-$ZLIB_VER && \
     CC="musl-gcc -fPIC -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure --static --prefix=$PREFIX && \

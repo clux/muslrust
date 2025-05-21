@@ -4,7 +4,7 @@ default:
   @just --list --unsorted --color=always
 
 _build channel platform aarch:
-	docker build --build-arg CHANNEL="{{channel}}" --build-arg AARCH="{{aarch}}" --platform="{{platform}}" -t rustmusl-temp . -f Dockerfile
+	docker build --build-arg CHANNEL="{{channel}}" --build-arg AARCH="{{aarch}}" --platform="{{platform}}" -t rustmusl-temp . -f Dockerfile --debug
 # Build the stable x86 container
 build-stable-amd: (_build "stable" "linux/amd64" "x86_64")
 # Build the nightly x86 container
