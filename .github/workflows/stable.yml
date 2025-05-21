@@ -36,108 +36,116 @@ jobs:
             aarch: aarch64
             target_dir: aarch64-unknown-linux-musl
     steps:
-    - uses: actions/checkout@v4
-    - uses: extractions/setup-just@v2
+      - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v2
 
-    - name: Login to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: clux
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: clux
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Check if we need a new stable
-      id: stablecheck
-      shell: bash
-      run: |
-        pip3 install --user toml
-        if python3 check_stable.py; then
-          echo "Stable tag missing; running all build steps"
-          echo '::set-output name=BUILD::YES'
-        else
-          echo "Stable tag found; skipping all build steps"
-        fi
+      - name: Check if we need a new stable
+        id: stablecheck
+        shell: bash
+        run: |
+          pip3 install --user toml
+          if python3 check_stable.py; then
+            echo "Stable tag missing; running all build steps"
+            echo '::set-output name=BUILD::YES'
+          else
+            echo "Stable tag found; skipping all build steps"
+          fi
 
-    - name: Prepare
-      run: |
-        platform=${{ matrix.platform }}
-        echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+      - name: Prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY_IMAGE }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Build stable image
-      id: build
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        platforms: ${{ matrix.platform }}
-        labels: ${{ steps.meta.outputs.labels }}
-        file: ${{ matrix.dockerfile }}
-        push: false
-        load: true
-        tags: rustmusl-temp
-        build-args: |
-          CHANNEL=stable
-          AARCH=${{ matrix.aarch }}
-      if: ${{ steps.stablecheck.outputs.BUILD }}
+      - name: Build stable image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: rustmusl-temp
+          build-args: |
+            CHANNEL=stable
+            AARCH=${{ matrix.aarch }}
+        if: ${{ steps.stablecheck.outputs.BUILD }}
 
-    - name: Run tests
-      if: ${{ steps.stablecheck.outputs.BUILD }}
-      shell: bash
-      run: |
-        docker buildx build --platform ${{ matrix.platform }} --output type=docker -t test-runner - < Dockerfile.test-runner
-        TARGET_DIR=${{ matrix.target_dir }} PLATFORM=${{ matrix.platform }} just test-ci
+      - name: Run tests
+        if: ${{ steps.stablecheck.outputs.BUILD }}
+        shell: bash
+        run: |
+          docker buildx build --platform ${{ matrix.platform }} --output type=docker -t test-runner - < Dockerfile.test-runner
+          TARGET_DIR=${{ matrix.target_dir }} PLATFORM=${{ matrix.platform }} just test-ci
 
-    # The date/channel/version are expected to be the same on both architectures and are needed for the merge step.
-    # We store them here since it makes the merge step a bit easier - it doesn't need to figure out which of the
-    # architectures it can run (to extract the rust version). The problem is that it appears we can't run images
-    # that were built by docker buildx (the build-push-action step) locally. They get pushed to dockerhub but are
-    # only identifiable by their digest and it appears docker does not let us select an image that way.
-    # Not the most elegant, but it works.
-    - name: Store tag info
-      if: ${{ steps.stablecheck.outputs.BUILD }}
-      shell: bash
-      run: |
-        mkdir -p /tmp/tags
-        RUST_DATE="$(date +"%Y-%m-%d")"
-        RUST_CHANNEL=stable
-        RUST_VER="$(docker run --platform ${{ matrix.platform }} rustmusl-temp rustc --version | grep -oE "[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]")"
+      # The date/channel/version are expected to be the same on both architectures and are needed for the merge step.
+      # We store them here since it makes the merge step a bit easier - it doesn't need to figure out which of the
+      # architectures it can run (to extract the rust version). The problem is that it appears we can't run images
+      # that were built by docker buildx (the build-push-action step) locally. They get pushed to dockerhub but are
+      # only identifiable by their digest and it appears docker does not let us select an image that way.
+      # Not the most elegant, but it works.
+      - name: Store tag info
+        if: ${{ steps.stablecheck.outputs.BUILD }}
+        shell: bash
+        run: |
+          mkdir -p /tmp/tags
+          RUST_DATE="$(date +"%Y-%m-%d")"
+          RUST_CHANNEL=stable
+          RUST_VER="$(docker run --platform ${{ matrix.platform }} rustmusl-temp rustc --version | grep -oE "[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]")"
 
-        echo $RUST_DATE > /tmp/tags/rust-date
-        echo $RUST_CHANNEL > /tmp/tags/rust-channel
-        echo $RUST_VER > /tmp/tags/rust-ver
+          echo $RUST_DATE > /tmp/tags/rust-date
+          echo $RUST_CHANNEL > /tmp/tags/rust-channel
+          echo $RUST_VER > /tmp/tags/rust-ver
 
-    - name: Tag and push
-      if: ${{ steps.stablecheck.outputs.BUILD }}
-      shell: bash
-      run: |
-        RUST_DATE=$(cat /tmp/tags/rust-date)
-        RUST_CHANNEL=$(cat /tmp/tags/rust-channel)
-        RUST_VER=$(cat /tmp/tags/rust-ver)
+      - name: Tag and push
+        if: ${{ steps.stablecheck.outputs.BUILD }}
+        shell: bash
+        run: |
+          RUST_DATE=$(cat /tmp/tags/rust-date)
+          RUST_CHANNEL=$(cat /tmp/tags/rust-channel)
+          RUST_VER=$(cat /tmp/tags/rust-ver)
 
-        TAG_NAME="${{ matrix.arch }}-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}"
+          TAG_NAME="${{ matrix.arch }}-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}"
 
-        docker tag rustmusl-temp ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
-        docker push ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
+          docker tag rustmusl-temp ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
+          docker push ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
 
-    - name: Upload tags
-      if: ${{ steps.stablecheck.outputs.BUILD }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: tags-${{matrix.arch}}
-        path: /tmp/tags
-        if-no-files-found: error
-        retention-days: 1
-        overwrite: true
+      - name: Attest docker.io
+        if: ${{ steps.stablecheck.outputs.BUILD }}
+        uses: actions/attest-build-provenance@v2.3.0
+        with:
+          subject-name: docker.io/${{ env.REGISTRY_IMAGE }}
+          subject-digest: ${{ steps.push_stable.outputs.digest }}
+          push-to-registry: true
+
+      - name: Upload tags
+        if: ${{ steps.stablecheck.outputs.BUILD }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tags-${{matrix.arch}}
+          path: /tmp/tags
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
 
   merge:
     name: 'Stable merge'
@@ -145,56 +153,56 @@ jobs:
     needs:
       - build
     steps:
-    - uses: actions/checkout@v4
-    - name: Check if we need a new stable
-      id: stablecheck
-      shell: bash
-      run: |
-        pip3 install --user toml
-        if python3 check_stable.py; then
-          echo "Stable tag missing; running all build steps"
-          echo '::set-output name=BUILD::YES'
-        else
-          echo "Stable tag found; skipping all build steps"
-        fi
+      - uses: actions/checkout@v4
+      - name: Check if we need a new stable
+        id: stablecheck
+        shell: bash
+        run: |
+          pip3 install --user toml
+          if python3 check_stable.py; then
+            echo "Stable tag missing; running all build steps"
+            echo '::set-output name=BUILD::YES'
+          else
+            echo "Stable tag found; skipping all build steps"
+          fi
 
-    - name: Download tags
-      if: ${{ steps.stablecheck.outputs.BUILD }}
-      uses: actions/download-artifact@v4
-      with:
-        path: /tmp/tags
-        pattern: tags-*
-        merge-multiple: true
+      - name: Download tags
+        if: ${{ steps.stablecheck.outputs.BUILD }}
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/tags
+          pattern: tags-*
+          merge-multiple: true
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY_IMAGE }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: clux
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: clux
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Create manifest list and push multi-platform images
-      if: ${{ steps.stablecheck.outputs.BUILD }}
-      run: |
-        RUST_DATE=$(cat /tmp/tags/rust-date)
-        RUST_CHANNEL=$(cat /tmp/tags/rust-channel)
-        RUST_VER=$(cat /tmp/tags/rust-ver)
+      - name: Create manifest list and push multi-platform images
+        if: ${{ steps.stablecheck.outputs.BUILD }}
+        run: |
+          RUST_DATE=$(cat /tmp/tags/rust-date)
+          RUST_CHANNEL=$(cat /tmp/tags/rust-channel)
+          RUST_VER=$(cat /tmp/tags/rust-ver)
 
-        for tag in ${RUST_CHANNEL} ${RUST_CHANNEL}-${RUST_DATE} ${RUST_VER}-${RUST_CHANNEL} ${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}; do
-          docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:$tag \
-            ${{ env.REGISTRY_IMAGE }}:amd64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE} \
-            ${{ env.REGISTRY_IMAGE }}:arm64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}
-          done
+          for tag in ${RUST_CHANNEL} ${RUST_CHANNEL}-${RUST_DATE} ${RUST_VER}-${RUST_CHANNEL} ${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}; do
+            docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:$tag \
+              ${{ env.REGISTRY_IMAGE }}:amd64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE} \
+              ${{ env.REGISTRY_IMAGE }}:arm64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}
+            done
 
-    - name: Inspect image
-      if: ${{ steps.stablecheck.outputs.BUILD }}
-      run: |
-        docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:latest
+      - name: Inspect image
+        if: ${{ steps.stablecheck.outputs.BUILD }}
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:latest
