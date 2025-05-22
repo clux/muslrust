@@ -28,12 +28,10 @@ jobs:
           - platform: linux/amd64
             dockerfile: Dockerfile
             arch: amd64
-            aarch: x86_64
             target_dir: x86_64-unknown-linux-musl
           - platform: linux/arm64
             dockerfile: Dockerfile
             arch: arm64
-            aarch: aarch64
             target_dir: aarch64-unknown-linux-musl
     steps:
     - uses: actions/checkout@v4
@@ -75,7 +73,6 @@ jobs:
         tags: rustmusl-temp
         build-args: |
           CHANNEL=nightly
-          AARCH=${{ matrix.aarch }}
 
     - name: Run tests
       shell: bash
