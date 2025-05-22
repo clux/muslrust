@@ -54,6 +54,7 @@ clean: clean-docker clean-tests
 # Cleanup docker images with clux/muslrus_t name
 clean-docker:
   docker images clux/muslrust -q | xargs -r docker rmi -f
+  docker builder prune --all
 
 # Cleanup test artifacts
 clean-tests:
