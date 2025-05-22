@@ -1,12 +1,14 @@
 # syntax=docker/dockerfile:1
-FROM ubuntu:noble
-LABEL maintainer="Eirik Albrigtsen <sszynrae@gmail.com>"
-LABEL org.opencontainers.image.create="$(date --utc --iso-8601=seconds)"
-LABEL org.opencontainers.image.documentation="https://github.com/clux/muslrust"
-LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.url="https://github.com/clux/muslrust"
-LABEL org.opencontainers.image.description="Docker environment for building musl based static rust binaries"
+ARG BASE_IMAGE=ubuntu:noble
 
+# Mapping ARM64 / AMD64 naming conventions to equivalent `uname -a` output (build target specific):
+FROM ${BASE_IMAGE} AS base-amd64
+ENV DOCKER_TARGET_ARCH=x86_64
+FROM ${BASE_IMAGE} AS base-arm64
+ENV DOCKER_TARGET_ARCH=aarch64
+
+FROM base-${TARGETARCH} AS base
+SHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]
 # Required packages:
 # - musl-dev, musl-tools - the musl toolchain
 # - curl, g++, make, pkgconf, cmake - for fetching and building third party libs
@@ -15,98 +17,146 @@ LABEL org.opencontainers.image.description="Docker environment for building musl
 # - file - needed by rustup.sh install
 # - automake autoconf libtool - support crates building C deps as part cargo build
 # NB: does not include cmake atm
-RUN apt-get update && apt-get install -y \
-  musl-dev \
-  musl-tools \
-  file \
-  git \
-  openssh-client \
-  make \
-  cmake \
-  g++ \
-  curl \
-  pkgconf \
-  ca-certificates \
-  automake \
-  autoconf \
-  libtool \
-  libprotobuf-dev \
-  unzip \
-  --no-install-recommends && \
-  rm -rf /var/lib/apt/lists/*
+RUN <<HEREDOC
+    apt-get update
+    apt-get install --no-install-recommends -y \
+        musl-dev \
+        musl-tools \
+        file \
+        git \
+        openssh-client \
+        make \
+        cmake \
+        g++ \
+        curl \
+        pkgconf \
+        ca-certificates \
+        automake \
+        autoconf \
+        libtool \
+        libprotobuf-dev \
+        unzip
 
-# Common arg for arch used in urls and triples
-ARG AARCH
-# Install rust using rustup
-ARG CHANNEL
-ENV RUSTUP_VER="1.28.2" \
-    RUST_ARCH="${AARCH}-unknown-linux-gnu" \
-    CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+    rm -rf /var/lib/apt/lists/*
+HEREDOC
 
-RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init && \
-    chmod +x rustup-init && \
-    ./rustup-init -y --default-toolchain ${CHANNEL} --profile minimal --no-modify-path && \
-    rm rustup-init && \
-    ~/.cargo/bin/rustup target add ${AARCH}-unknown-linux-musl
+# Install a more recent release of protoc:
+ARG PROTOBUF_VER="31.0"
+RUN <<HEREDOC
+    if [[ ${DOCKER_TARGET_ARCH} == 'aarch64' ]]; then
+      DOCKER_TARGET_ARCH=aarch_64
+    fi
 
-# Allow non-root access to cargo
-RUN chmod a+X /root
+    ASSET_NAME="protoc-${PROTOBUF_VER}-linux-${DOCKER_TARGET_ARCH}"
+    curl -fsSL -o protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VER}/${ASSET_NAME}.zip"
 
-# Convenience list of versions and variables for compilation later on
+    unzip -j -d /usr/local/bin protoc.zip bin/protoc
+    rm -rf protoc.zip
+HEREDOC
+
+# Install prebuilt sccache based on platform:
+ARG SCCACHE_VER="0.10.0"
+RUN <<HEREDOC
+    ASSET_NAME="sccache-v${SCCACHE_VER}-${DOCKER_TARGET_ARCH}-unknown-linux-musl"
+    curl -fsSL "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VER}/${ASSET_NAME}.tar.gz" \
+      | tar -xz -C /usr/local/bin --strip-components=1 --no-same-owner "${ASSET_NAME}/sccache"
+HEREDOC
+
+# Convenience list of variables for later compilation stages.
 # This helps continuing manually if anything breaks.
-ENV ZLIB_VER="1.3.1" \
-    SQLITE_VER="3490200" \
-    PROTOBUF_VER="31.0" \
-    SCCACHE_VER="0.10.0" \
-    CC=musl-gcc \
+ENV CC=musl-gcc \
     PREFIX=/musl \
-    PATH=/usr/local/bin:/root/.cargo/bin:$PATH \
-    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
-    LD_LIBRARY_PATH=$PREFIX
-
-# Install a more recent release of protoc (protobuf-compiler in jammy is 4 years old and misses some features)
-RUN cd /tmp && \
-    curl -sSL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VER}/protoc-${PROTOBUF_VER}-linux-$([ "$AARCH" = "aarch64" ] && echo "aarch_64" || echo "$AARCH").zip -o protoc.zip && \
-    unzip protoc.zip && \
-    cp bin/protoc /usr/bin/protoc && \
-    rm -rf *
-
-# Install prebuilt sccache based on platform
-RUN curl -sSL https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VER}/sccache-v${SCCACHE_VER}-${AARCH}-unknown-linux-musl.tar.gz | tar xz && \
-    mv sccache-v${SCCACHE_VER}-*-unknown-linux-musl/sccache /usr/local/bin/ && \
-    chmod +x /usr/local/bin/sccache && \
-    rm -rf sccache-v${SCCACHE_VER}-*-unknown-linux-musl
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
 # Build zlib
-RUN curl -sSL https://zlib.net/zlib-$ZLIB_VER.tar.gz | tar xz && \
-    cd zlib-$ZLIB_VER && \
-    CC="musl-gcc -fPIC -pie" LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure --static --prefix=$PREFIX && \
-    make -j$(nproc) && make install && \
-    cd .. && rm -rf zlib-$ZLIB_VER
+FROM base AS build-zlib
+ARG ZLIB_VER="1.3.1"
+WORKDIR /src/zlib
+RUN <<HEREDOC
+    curl -fsSL "https://zlib.net/zlib-${ZLIB_VER}.tar.gz" | tar -xz --strip-components=1
+
+    export CC="musl-gcc -fPIC -pie"
+    export CFLAGS="-I${PREFIX}/include"
+    export LDFLAGS="-L${PREFIX}/lib"
+
+    ./configure --static --prefix="${PREFIX}"
+    make -j$(nproc) && make install
+HEREDOC
 
 # Build libsqlite3 using same configuration as the alpine linux main/sqlite package
-RUN curl -sSL https://www.sqlite.org/2025/sqlite-autoconf-$SQLITE_VER.tar.gz | tar xz && \
-    cd sqlite-autoconf-$SQLITE_VER && \
-    CFLAGS="-DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_SECURE_DELETE -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_RTREE -DSQLITE_USE_URI -DSQLITE_ENABLE_DBSTAT_VTAB -DSQLITE_ENABLE_JSON1" \
-    CC="musl-gcc -fPIC -pie" \
-    ./configure --prefix=$PREFIX --host=x86_64-unknown-linux-musl --enable-threadsafe --disable-shared && \
-    make && make install && \
-    cd .. && rm -rf sqlite-autoconf-$SQLITE_VER
+FROM base AS build-sqlite
+ARG SQLITE_VER="3490200"
+WORKDIR /src/sqlite
+RUN <<HEREDOC
+    curl -fsSL "https://www.sqlite.org/2025/sqlite-autoconf-${SQLITE_VER}.tar.gz" | tar -xz --strip-components=1
 
-ENV PATH=/root/.cargo/bin:$PREFIX/bin:$PATH \
-    RUSTUP_HOME=/root/.rustup \
-    CARGO_BUILD_TARGET=${AARCH}-unknown-linux-musl \
-    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-Clink-self-contained=yes -Clinker=rust-lld -Ctarget-feature=+crt-static" \
+    export CC="musl-gcc -fPIC -pie"
+    export CFLAGS="-DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_SECURE_DELETE -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_RTREE -DSQLITE_USE_URI -DSQLITE_ENABLE_DBSTAT_VTAB -DSQLITE_ENABLE_JSON1"
+
+    ./configure --prefix="${PREFIX}" --host=x86_64-unknown-linux-musl --enable-threadsafe --disable-shared
+    make && make install
+HEREDOC
+
+# Install rust using rustup
+FROM base AS install-rustup
+ARG CHANNEL
+# Use specific version of Rustup:
+# https://github.com/clux/muslrust/pull/63
+ARG RUSTUP_VER="1.28.2"
+# Better support for running container user as non-root:
+# https://github.com/clux/muslrust/pull/101
+# Uses `--no-modify-path` as `PATH` is set explicitly
+ENV RUSTUP_HOME=/opt/rustup
+ENV CARGO_HOME=/opt/cargo
+RUN <<HEREDOC
+    RUST_ARCH="${DOCKER_TARGET_ARCH}-unknown-linux-gnu"
+    curl -fsSL -o rustup-init "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init"
+    chmod +x rustup-init
+    mkdir -p /opt/{cargo,rustup}
+
+    ./rustup-init -y \
+      --default-toolchain "${CHANNEL}" \
+      --profile minimal \
+      --no-modify-path \
+      --target "${DOCKER_TARGET_ARCH}-unknown-linux-musl"
+
+    rm rustup-init
+HEREDOC
+
+FROM base AS release
+COPY --link --from=install-rustup /opt /opt
+COPY --link --from=build-zlib ${PREFIX} ${PREFIX}
+COPY --link --from=build-sqlite ${PREFIX} ${PREFIX}
+
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C link-self-contained=yes -C linker=rust-lld -C target-feature=+crt-static" \
     PKG_CONFIG_ALLOW_CROSS=true \
     PKG_CONFIG_ALL_STATIC=true \
-    PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig \
+    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig \
     PG_CONFIG_X86_64_UNKNOWN_LINUX_GNU=/usr/bin/pg_config \
     PG_CONFIG_AARCH64_UNKNOWN_LINUX_GNU=/usr/bin/pg_config \
-    # Rust libz-sys support
+    # Rust `libz-sys` support:
     LIBZ_SYS_STATIC=1 \
     ZLIB_STATIC=1 \
+    # Better support for running container user as non-root:
+    # https://github.com/clux/muslrust/pull/101
+    CARGO_BUILD_TARGET=${DOCKER_TARGET_ARCH}-unknown-linux-musl \
+    CARGO_HOME=/opt/cargo \
+    RUSTUP_HOME=/opt/rustup \
+    # PATH prepends:
+    # - `/opt/cargo/bin` for `cargo` + `rustup`
+    # - `${PREFIX}/bin` for `sqlite3`
+    PATH=/opt/cargo/bin:${PREFIX}/bin:${PATH} \
+    # Misc:
     DEBIAN_FRONTEND=noninteractive \
     TZ=Etc/UTC
 
 # Allow ditching the -w /volume flag to docker run
 WORKDIR /volume
+
+LABEL org.opencontainers.image.authors="Eirik Albrigtsen <sszynrae@gmail.com>"
+#LABEL org.opencontainers.image.create="$(date --utc --iso-8601=seconds)"
+LABEL org.opencontainers.image.documentation="https://github.com/clux/muslrust"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.url="https://github.com/clux/muslrust"
+LABEL org.opencontainers.image.description="Docker environment for building musl based static rust binaries"
+
