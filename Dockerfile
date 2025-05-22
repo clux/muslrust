@@ -1,7 +1,14 @@
 # syntax=docker/dockerfile:1
-FROM ubuntu:noble AS base
-SHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]
+ARG BASE_IMAGE=ubuntu:noble
 
+# Mapping ARM64 / AMD64 naming conventions to equivalent `uname -a` output (build target specific):
+FROM ${BASE_IMAGE} AS base-amd64
+ENV DOCKER_TARGET_ARCH=x86_64
+FROM ${BASE_IMAGE} AS base-arm64
+ENV DOCKER_TARGET_ARCH=aarch64
+
+FROM base-${TARGETARCH} AS base
+SHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]
 # Required packages:
 # - musl-dev, musl-tools - the musl toolchain
 # - curl, g++, make, pkgconf, cmake - for fetching and building third party libs
@@ -33,26 +40,24 @@ RUN <<HEREDOC
     rm -rf /var/lib/apt/lists/*
 HEREDOC
 
-# Common arg for arch used in urls and triples
-# Effectively `uname -a` but can be used
-ARG AARCH
-
-# Install a more recent release of protoc
-# NOTE: `protobuf-compiler` in Ubuntu Noble is v21.12 (Dec 2022):
-# https://launchpad.net/ubuntu/noble/+package/protobuf-compiler
+# Install a more recent release of protoc:
 ARG PROTOBUF_VER="31.0"
 RUN <<HEREDOC
-    ASSET_NAME="protoc-${PROTOBUF_VER}-linux-$([ "${AARCH}" = "aarch64" ] && echo "aarch_64" || echo "{$AARCH}")"
+    if [[ ${DOCKER_TARGET_ARCH} == 'aarch64' ]]; then
+      DOCKER_TARGET_ARCH=aarch_64
+    fi
+
+    ASSET_NAME="protoc-${PROTOBUF_VER}-linux-${DOCKER_TARGET_ARCH}"
     curl -fsSL -o protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VER}/${ASSET_NAME}.zip"
 
     unzip -j -d /usr/local/bin protoc.zip bin/protoc
     rm -rf protoc.zip
 HEREDOC
 
-# Install prebuilt sccache based on platform
+# Install prebuilt sccache based on platform:
 ARG SCCACHE_VER="0.10.0"
 RUN <<HEREDOC
-    ASSET_NAME="sccache-v${SCCACHE_VER}-${AARCH}-unknown-linux-musl"
+    ASSET_NAME="sccache-v${SCCACHE_VER}-${DOCKER_TARGET_ARCH}-unknown-linux-musl"
     curl -fsSL "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VER}/${ASSET_NAME}.tar.gz" \
       | tar -xz -C /usr/local/bin --strip-components=1 --no-same-owner "${ASSET_NAME}/sccache"
 HEREDOC
@@ -104,7 +109,7 @@ ARG RUSTUP_VER="1.28.2"
 ENV RUSTUP_HOME=/opt/rustup
 ENV CARGO_HOME=/opt/cargo
 RUN <<HEREDOC
-    RUST_ARCH="${AARCH}-unknown-linux-gnu"
+    RUST_ARCH="${DOCKER_TARGET_ARCH}-unknown-linux-gnu"
     curl -fsSL -o rustup-init "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init"
     chmod +x rustup-init
     mkdir -p /opt/{cargo,rustup}
@@ -113,7 +118,7 @@ RUN <<HEREDOC
       --default-toolchain "${CHANNEL}" \
       --profile minimal \
       --no-modify-path \
-      --target "${AARCH}-unknown-linux-musl"
+      --target "${DOCKER_TARGET_ARCH}-unknown-linux-musl"
 
     rm rustup-init
 HEREDOC
@@ -134,7 +139,7 @@ ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C link-self-contained=ye
     ZLIB_STATIC=1 \
     # Better support for running container user as non-root:
     # https://github.com/clux/muslrust/pull/101
-    CARGO_BUILD_TARGET=${AARCH}-unknown-linux-musl \
+    CARGO_BUILD_TARGET=${DOCKER_TARGET_ARCH}-unknown-linux-musl \
     CARGO_HOME=/opt/cargo \
     RUSTUP_HOME=/opt/rustup \
     # PATH prepends:
