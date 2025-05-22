@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.4
 ARG BASE_IMAGE=ubuntu:noble
 
 # Mapping ARM64 / AMD64 naming conventions to equivalent `uname -a` output (build target specific):
