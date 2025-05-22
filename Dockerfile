@@ -2,13 +2,6 @@
 FROM ubuntu:noble
 SHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]
 
-LABEL maintainer="Eirik Albrigtsen <sszynrae@gmail.com>"
-LABEL org.opencontainers.image.create="$(date --utc --iso-8601=seconds)"
-LABEL org.opencontainers.image.documentation="https://github.com/clux/muslrust"
-LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.url="https://github.com/clux/muslrust"
-LABEL org.opencontainers.image.description="Docker environment for building musl based static rust binaries"
-
 # Required packages:
 # - musl-dev, musl-tools - the musl toolchain
 # - curl, g++, make, pkgconf, cmake - for fetching and building third party libs
@@ -42,34 +35,6 @@ HEREDOC
 
 # Common arg for arch used in urls and triples
 ARG AARCH
-
-# Install rust using rustup
-ARG CHANNEL
-# Use specific version of Rustup:
-# https://github.com/clux/muslrust/pull/63
-ARG RUSTUP_VER="1.28.2"
-# Better support for running container user as non-root:
-# https://github.com/clux/muslrust/pull/101
-# Uses `--no-modify-path` with PATH update + chmod on `/root` for access
-ENV CARGO_BUILD_TARGET=${AARCH}-unknown-linux-musl
-ENV RUSTUP_HOME=/root/.rustup
-ENV PATH=/root/.cargo/bin:${PATH}
-RUN <<HEREDOC
-    # Allow non-root access to cargo/rustup:
-    chmod a+X /root
-
-    RUST_ARCH="${AARCH}-unknown-linux-gnu"
-    curl -fsSL -o rustup-init "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init"
-    chmod +x rustup-init
-
-    ./rustup-init -y \
-      --default-toolchain "${CHANNEL}" \
-      --profile minimal \
-      --no-modify-path \
-      --target "${AARCH}-unknown-linux-musl"
-
-    rm rustup-init
-HEREDOC
 
 # Convenience list of variables for later compilation stages.
 # This helps continuing manually if anything breaks.
@@ -126,23 +91,65 @@ RUN <<HEREDOC
     make && make install
 HEREDOC
 
+# Install rust using rustup
+FROM base AS install-rustup
+ARG CHANNEL
+# Use specific version of Rustup:
+# https://github.com/clux/muslrust/pull/63
+ARG RUSTUP_VER="1.28.2"
+# Better support for running container user as non-root:
+# https://github.com/clux/muslrust/pull/101
+# Uses `--no-modify-path` as `PATH` is set explicitly
+ENV RUSTUP_HOME=/opt/rustup
+ENV CARGO_HOME=/opt/cargo
+RUN <<HEREDOC
+    RUST_ARCH="${AARCH}-unknown-linux-gnu"
+    curl -fsSL -o rustup-init "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init"
+    chmod +x rustup-init
+    mkdir -p /opt/{cargo,rustup}
+
+    ./rustup-init -y \
+      --default-toolchain "${CHANNEL}" \
+      --profile minimal \
+      --no-modify-path \
+      --target "${AARCH}-unknown-linux-musl"
+
+    rm rustup-init
+HEREDOC
+
 FROM base AS release
+COPY --link --from=install-rustup /opt /opt
 COPY --link --from=build-zlib ${PREFIX} ${PREFIX}
 COPY --link --from=build-sqlite ${PREFIX} ${PREFIX}
 
-# NOTE: PATH prepends `${PREFIX}/bin` for `sqlite3`
-ENV PATH=${PREFIX}/bin:${PATH} \
-    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-Clink-self-contained=yes -Clinker=rust-lld -Ctarget-feature=+crt-static" \
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C link-self-contained=yes -C linker=rust-lld -C target-feature=+crt-static" \
     PKG_CONFIG_ALLOW_CROSS=true \
     PKG_CONFIG_ALL_STATIC=true \
     PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig \
     PG_CONFIG_X86_64_UNKNOWN_LINUX_GNU=/usr/bin/pg_config \
     PG_CONFIG_AARCH64_UNKNOWN_LINUX_GNU=/usr/bin/pg_config \
-    # Rust libz-sys support
+    # Rust `libz-sys` support:
     LIBZ_SYS_STATIC=1 \
     ZLIB_STATIC=1 \
+    # Better support for running container user as non-root:
+    # https://github.com/clux/muslrust/pull/101
+    CARGO_HOME=/opt/cargo \
+    RUSTUP_HOME=/opt/rustup \
+    # PATH prepends:
+    # - `/opt/cargo/bin` for `cargo` + `rustup`
+    # - `${PREFIX}/bin` for `sqlite3`
+    PATH=/root/.cargo/bin:${PREFIX}/bin:${PATH} \
+    # Misc:
     DEBIAN_FRONTEND=noninteractive \
     TZ=Etc/UTC
 
 # Allow ditching the -w /volume flag to docker run
 WORKDIR /volume
+
+LABEL org.opencontainers.image.authors="Eirik Albrigtsen <sszynrae@gmail.com>"
+LABEL org.opencontainers.image.create="$(date --utc --iso-8601=seconds)"
+LABEL org.opencontainers.image.documentation="https://github.com/clux/muslrust"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.url="https://github.com/clux/muslrust"
+LABEL org.opencontainers.image.description="Docker environment for building musl based static rust binaries"
+
