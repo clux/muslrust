@@ -26,11 +26,9 @@ jobs:
         platform: [linux/amd64, linux/arm64]
         include:
           - platform: linux/amd64
-            dockerfile: Dockerfile
             arch: amd64
             target_dir: x86_64-unknown-linux-musl
           - platform: linux/arm64
-            dockerfile: Dockerfile
             arch: arm64
             target_dir: aarch64-unknown-linux-musl
     steps:
@@ -79,7 +77,6 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          file: ${{ matrix.dockerfile }}
           push: false
           load: true
           tags: rustmusl-temp

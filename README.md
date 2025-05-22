@@ -53,9 +53,9 @@ The following system libraries are compiled against `musl-gcc`:
 - sqlite3 ([libsqlite3-sys crate](https://github.com/jgallagher/rusqlite/tree/master/libsqlite3-sys) used by [diesel](https://github.com/diesel-rs/diesel))
 - zlib
 
-Note that these libraries **may be removed** if sensible and popular Rust crates can replace them in the future.
+These dependencies are updated with renovate from git releases.
 
-In the mean time, we **[try](https://github.com/clux/muslrust/blob/main/update_libs.py)** to keep these up to date.
+Note that these libraries **may be removed** if sensible and popular Rust crates can replace them in the future.
 
 Removed Libraries;
 

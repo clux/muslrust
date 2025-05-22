@@ -41,24 +41,26 @@ RUN <<EOF
 EOF
 
 # Install a more recent release of protoc:
-ARG PROTOBUF_VER="31.0"
+# renovate: datasource=github-releases depName=protocolbuffers/protobuf versioning=semver-coerced
+ARG PB_VERSION="v31.0"
 RUN <<EOF
     if [[ ${DOCKER_TARGET_ARCH} == 'aarch64' ]]; then
       DOCKER_TARGET_ARCH=aarch_64
     fi
 
-    ASSET_NAME="protoc-${PROTOBUF_VER}-linux-${DOCKER_TARGET_ARCH}"
-    curl -fsSL -o protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VER}/${ASSET_NAME}.zip"
+    ASSET_NAME="protoc-${PB_VERSION#v}-linux-${DOCKER_TARGET_ARCH}"
+    curl -fsSL -o protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v${PB_VERSION#v}/${ASSET_NAME}.zip"
 
     unzip -j -d /usr/local/bin protoc.zip bin/protoc
     rm -rf protoc.zip
 EOF
 
 # Install prebuilt sccache based on platform:
-ARG SCCACHE_VER="0.10.0"
+# renovate: datasource=github-releases depName=mozilla/sccache
+ARG SCCACHE_VERSION="0.10.0"
 RUN <<EOF
-    ASSET_NAME="sccache-v${SCCACHE_VER}-${DOCKER_TARGET_ARCH}-unknown-linux-musl"
-    curl -fsSL "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VER}/${ASSET_NAME}.tar.gz" \
+    ASSET_NAME="sccache-v${SCCACHE_VERSION}-${DOCKER_TARGET_ARCH}-unknown-linux-musl"
+    curl -fsSL "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VERSION}/${ASSET_NAME}.tar.gz" \
       | tar -xz -C /usr/local/bin --strip-components=1 --no-same-owner "${ASSET_NAME}/sccache"
 EOF
 
@@ -70,10 +72,11 @@ ENV CC=musl-gcc \
 
 # Build zlib
 FROM base AS build-zlib
-ARG ZLIB_VER="1.3.1"
+# renovate: datasource=github-releases depName=madler/zlib
+ARG ZLIB_VERSION="1.3.1"
 WORKDIR /src/zlib
 RUN <<EOF
-    curl -fsSL "https://zlib.net/zlib-${ZLIB_VER}.tar.gz" | tar -xz --strip-components=1
+    curl -fsSL "https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz" | tar -xz --strip-components=1
 
     export CC="musl-gcc -fPIC -pie"
     export CFLAGS="-I${PREFIX}/include"
@@ -85,10 +88,13 @@ EOF
 
 # Build libsqlite3 using same configuration as the alpine linux main/sqlite package
 FROM base AS build-sqlite
-ARG SQLITE_VER="3490200"
+# renovate: datasource=github-tags packageName=sqlite/sqlite versioning=semver-coerced
+ARG SQLITE_VERSION="3.49.2"
 WORKDIR /src/sqlite
 RUN <<EOF
-    curl -fsSL "https://www.sqlite.org/2025/sqlite-autoconf-${SQLITE_VER}.tar.gz" | tar -xz --strip-components=1
+    # see product names and info at https://sqlite.org/download.html for why this line constructs the tarball name from a semver version
+    SQL_ID="$(awk -F. '{print $1}' <<< "${SQLITE_VERSION}")$(printf "%02d" $(awk -F. '{print $2}' <<< "${SQLITE_VERSION}"))$(printf "%02d" $(awk -F. '{print $3}' <<< "${SQLITE_VERSION}"))00"
+    curl -fsSL "https://www.sqlite.org/2025/sqlite-autoconf-${SQL_ID}.tar.gz" | tar -xz --strip-components=1
 
     export CC="musl-gcc -fPIC -pie"
     export CFLAGS="-DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_SECURE_DELETE -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_RTREE -DSQLITE_USE_URI -DSQLITE_ENABLE_DBSTAT_VTAB -DSQLITE_ENABLE_JSON1"
@@ -102,7 +108,8 @@ FROM base AS install-rustup
 ARG CHANNEL
 # Use specific version of Rustup:
 # https://github.com/clux/muslrust/pull/63
-ARG RUSTUP_VER="1.28.2"
+# renovate: datasource=github-tags packageName=rust-lang/rustup
+ARG RUSTUP_VERSION=1.28.2
 # Better support for running container user as non-root:
 # https://github.com/clux/muslrust/pull/101
 # Uses `--no-modify-path` as `PATH` is set explicitly
@@ -110,7 +117,7 @@ ENV RUSTUP_HOME=/opt/rustup
 ENV CARGO_HOME=/opt/cargo
 RUN <<EOF
     RUST_ARCH="${DOCKER_TARGET_ARCH}-unknown-linux-gnu"
-    curl -fsSL -o rustup-init "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init"
+    curl -fsSL -o rustup-init "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${RUST_ARCH}/rustup-init"
     chmod +x rustup-init
     mkdir -p /opt/{cargo,rustup}
 
