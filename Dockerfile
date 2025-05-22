@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM ubuntu:noble
+FROM ubuntu:noble AS base
 SHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]
 
 # Required packages:
@@ -34,13 +34,8 @@ RUN <<HEREDOC
 HEREDOC
 
 # Common arg for arch used in urls and triples
+# Effectively `uname -a` but can be used
 ARG AARCH
-
-# Convenience list of variables for later compilation stages.
-# This helps continuing manually if anything breaks.
-ENV CC=musl-gcc \
-    PREFIX=/musl \
-    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
 # Install a more recent release of protoc
 # NOTE: `protobuf-compiler` in Ubuntu Noble is v21.12 (Dec 2022):
@@ -61,6 +56,12 @@ RUN <<HEREDOC
     curl -fsSL "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VER}/${ASSET_NAME}.tar.gz" \
       | tar -xz -C /usr/local/bin --strip-components=1 --no-same-owner "${ASSET_NAME}/sccache"
 HEREDOC
+
+# Convenience list of variables for later compilation stages.
+# This helps continuing manually if anything breaks.
+ENV CC=musl-gcc \
+    PREFIX=/musl \
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
 # Build zlib
 FROM base AS build-zlib
@@ -133,12 +134,13 @@ ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C link-self-contained=ye
     ZLIB_STATIC=1 \
     # Better support for running container user as non-root:
     # https://github.com/clux/muslrust/pull/101
+    CARGO_BUILD_TARGET=${AARCH}-unknown-linux-musl \
     CARGO_HOME=/opt/cargo \
     RUSTUP_HOME=/opt/rustup \
     # PATH prepends:
     # - `/opt/cargo/bin` for `cargo` + `rustup`
     # - `${PREFIX}/bin` for `sqlite3`
-    PATH=/root/.cargo/bin:${PREFIX}/bin:${PATH} \
+    PATH=/opt/cargo/bin:${PREFIX}/bin:${PATH} \
     # Misc:
     DEBIAN_FRONTEND=noninteractive \
     TZ=Etc/UTC
@@ -147,7 +149,7 @@ ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C link-self-contained=ye
 WORKDIR /volume
 
 LABEL org.opencontainers.image.authors="Eirik Albrigtsen <sszynrae@gmail.com>"
-LABEL org.opencontainers.image.create="$(date --utc --iso-8601=seconds)"
+#LABEL org.opencontainers.image.create="$(date --utc --iso-8601=seconds)"
 LABEL org.opencontainers.image.documentation="https://github.com/clux/muslrust"
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.url="https://github.com/clux/muslrust"
