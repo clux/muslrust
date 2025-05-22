@@ -17,7 +17,7 @@ SHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]
 # - file - needed by rustup.sh install
 # - automake autoconf libtool - support crates building C deps as part cargo build
 # NB: does not include cmake atm
-RUN <<HEREDOC
+RUN <<EOF
     apt-get update
     apt-get install --no-install-recommends -y \
         musl-dev \
@@ -38,11 +38,11 @@ RUN <<HEREDOC
         unzip
 
     rm -rf /var/lib/apt/lists/*
-HEREDOC
+EOF
 
 # Install a more recent release of protoc:
 ARG PROTOBUF_VER="31.0"
-RUN <<HEREDOC
+RUN <<EOF
     if [[ ${DOCKER_TARGET_ARCH} == 'aarch64' ]]; then
       DOCKER_TARGET_ARCH=aarch_64
     fi
@@ -52,15 +52,15 @@ RUN <<HEREDOC
 
     unzip -j -d /usr/local/bin protoc.zip bin/protoc
     rm -rf protoc.zip
-HEREDOC
+EOF
 
 # Install prebuilt sccache based on platform:
 ARG SCCACHE_VER="0.10.0"
-RUN <<HEREDOC
+RUN <<EOF
     ASSET_NAME="sccache-v${SCCACHE_VER}-${DOCKER_TARGET_ARCH}-unknown-linux-musl"
     curl -fsSL "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VER}/${ASSET_NAME}.tar.gz" \
       | tar -xz -C /usr/local/bin --strip-components=1 --no-same-owner "${ASSET_NAME}/sccache"
-HEREDOC
+EOF
 
 # Convenience list of variables for later compilation stages.
 # This helps continuing manually if anything breaks.
@@ -72,7 +72,7 @@ ENV CC=musl-gcc \
 FROM base AS build-zlib
 ARG ZLIB_VER="1.3.1"
 WORKDIR /src/zlib
-RUN <<HEREDOC
+RUN <<EOF
     curl -fsSL "https://zlib.net/zlib-${ZLIB_VER}.tar.gz" | tar -xz --strip-components=1
 
     export CC="musl-gcc -fPIC -pie"
@@ -81,13 +81,13 @@ RUN <<HEREDOC
 
     ./configure --static --prefix="${PREFIX}"
     make -j$(nproc) && make install
-HEREDOC
+EOF
 
 # Build libsqlite3 using same configuration as the alpine linux main/sqlite package
 FROM base AS build-sqlite
 ARG SQLITE_VER="3490200"
 WORKDIR /src/sqlite
-RUN <<HEREDOC
+RUN <<EOF
     curl -fsSL "https://www.sqlite.org/2025/sqlite-autoconf-${SQLITE_VER}.tar.gz" | tar -xz --strip-components=1
 
     export CC="musl-gcc -fPIC -pie"
@@ -95,7 +95,7 @@ RUN <<HEREDOC
 
     ./configure --prefix="${PREFIX}" --host=x86_64-unknown-linux-musl --enable-threadsafe --disable-shared
     make && make install
-HEREDOC
+EOF
 
 # Install rust using rustup
 FROM base AS install-rustup
@@ -108,7 +108,7 @@ ARG RUSTUP_VER="1.28.2"
 # Uses `--no-modify-path` as `PATH` is set explicitly
 ENV RUSTUP_HOME=/opt/rustup
 ENV CARGO_HOME=/opt/cargo
-RUN <<HEREDOC
+RUN <<EOF
     RUST_ARCH="${DOCKER_TARGET_ARCH}-unknown-linux-gnu"
     curl -fsSL -o rustup-init "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init"
     chmod +x rustup-init
@@ -121,7 +121,7 @@ RUN <<HEREDOC
       --target "${DOCKER_TARGET_ARCH}-unknown-linux-musl"
 
     rm rustup-init
-HEREDOC
+EOF
 
 FROM base AS release
 COPY --link --from=install-rustup /opt /opt
@@ -154,7 +154,6 @@ ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C link-self-contained=ye
 WORKDIR /volume
 
 LABEL org.opencontainers.image.authors="Eirik Albrigtsen <sszynrae@gmail.com>"
-#LABEL org.opencontainers.image.create="$(date --utc --iso-8601=seconds)"
 LABEL org.opencontainers.image.documentation="https://github.com/clux/muslrust"
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.url="https://github.com/clux/muslrust"
