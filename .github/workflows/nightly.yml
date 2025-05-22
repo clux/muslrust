@@ -34,90 +34,90 @@ jobs:
             arch: arm64
             target_dir: aarch64-unknown-linux-musl
     steps:
-    - uses: actions/checkout@v4
-    - uses: extractions/setup-just@v2
+      - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v2
 
-    - name: Login to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: clux
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: clux
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Prepare
-      run: |
-        platform=${{ matrix.platform }}
-        echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+      - name: Prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY_IMAGE }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Build nightly image
-      id: build
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        platforms: ${{ matrix.platform }}
-        labels: ${{ steps.meta.outputs.labels }}
-        file: ${{ matrix.dockerfile }}
-        push: false
-        load: true
-        tags: rustmusl-temp
-        build-args: |
-          CHANNEL=nightly
+      - name: Build nightly image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: rustmusl-temp
+          build-args: |
+            CHANNEL=nightly
 
-    - name: Run tests
-      shell: bash
-      run: |
-        docker buildx build --platform ${{ matrix.platform }} --output type=docker -t test-runner - < Dockerfile.test-runner
-        TARGET_DIR=${{ matrix.target_dir }} PLATFORM=${{ matrix.platform }} just test-ci
+      - name: Run tests
+        shell: bash
+        run: |
+          docker buildx build --platform ${{ matrix.platform }} --output type=docker -t test-runner - < Dockerfile.test-runner
+          TARGET_DIR=${{ matrix.target_dir }} PLATFORM=${{ matrix.platform }} just test-ci
 
-    # The date/channel/version are expected to be the same on both architectures and are needed for the merge step.
-    # We store them here since it makes the merge step a bit easier - it doesn't need to figure out which of the
-    # architectures it can run (to extract the rust version). The problem is that it appears we can't run images
-    # that were built by docker buildx (the build-push-action step) locally. They get pushed to dockerhub but are
-    # only identifiable by their digest and it appears docker does not let us select an image that way.
-    # Not the most elegant, but it works.
-    - name: Store tag info
-      shell: bash
-      run: |
-        mkdir -p /tmp/tags
-        RUST_DATE="$(date +"%Y-%m-%d")"
-        RUST_CHANNEL=nightly
-        RUST_VER="$(docker run --platform ${{ matrix.platform }} rustmusl-temp rustc --version | grep -oE "[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]")"
+      # The date/channel/version are expected to be the same on both architectures and are needed for the merge step.
+      # We store them here since it makes the merge step a bit easier - it doesn't need to figure out which of the
+      # architectures it can run (to extract the rust version). The problem is that it appears we can't run images
+      # that were built by docker buildx (the build-push-action step) locally. They get pushed to dockerhub but are
+      # only identifiable by their digest and it appears docker does not let us select an image that way.
+      # Not the most elegant, but it works.
+      - name: Store tag info
+        shell: bash
+        run: |
+          mkdir -p /tmp/tags
+          RUST_DATE="$(date +"%Y-%m-%d")"
+          RUST_CHANNEL=nightly
+          RUST_VER="$(docker run --platform ${{ matrix.platform }} rustmusl-temp rustc --version | grep -oE "[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]")"
 
-        echo $RUST_DATE > /tmp/tags/rust-date
-        echo $RUST_CHANNEL > /tmp/tags/rust-channel
-        echo $RUST_VER > /tmp/tags/rust-ver
+          echo $RUST_DATE > /tmp/tags/rust-date
+          echo $RUST_CHANNEL > /tmp/tags/rust-channel
+          echo $RUST_VER > /tmp/tags/rust-ver
 
-    - name: Tag and push
-      shell: bash
-      run: |
-        RUST_DATE=$(cat /tmp/tags/rust-date)
-        RUST_CHANNEL=$(cat /tmp/tags/rust-channel)
-        RUST_VER=$(cat /tmp/tags/rust-ver)
+      - name: Tag and push
+        shell: bash
+        run: |
+          RUST_DATE=$(cat /tmp/tags/rust-date)
+          RUST_CHANNEL=$(cat /tmp/tags/rust-channel)
+          RUST_VER=$(cat /tmp/tags/rust-ver)
 
-        TAG_NAME="${{ matrix.arch }}-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}"
+          TAG_NAME="${{ matrix.arch }}-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}"
 
-        docker tag rustmusl-temp ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
-        docker push ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
+          docker tag rustmusl-temp ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
+          docker push ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
 
-    - name: Upload tags
-      uses: actions/upload-artifact@v4
-      with:
-        name: tags-${{matrix.arch}}
-        path: /tmp/tags
-        if-no-files-found: error
-        retention-days: 1
-        overwrite: true
+      - name: Upload tags
+        uses: actions/upload-artifact@v4
+        with:
+          name: tags-${{matrix.arch}}
+          path: /tmp/tags
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
 
   merge:
     runs-on: ubuntu-latest

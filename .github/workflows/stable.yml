@@ -126,13 +126,14 @@ jobs:
           docker tag rustmusl-temp ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
           docker push ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
 
-      - name: Attest docker.io
-        if: ${{ steps.stablecheck.outputs.BUILD }}
-        uses: actions/attest-build-provenance@v2.3.0
-        with:
-          subject-name: docker.io/${{ env.REGISTRY_IMAGE }}
-          subject-digest: ${{ steps.push_stable.outputs.digest }}
-          push-to-registry: true
+      # TODO: want to do this, but need digest, which might not be trivial to get outside build-push-action
+      # - name: Attest docker.io
+      #   if: ${{ steps.stablecheck.outputs.BUILD }}
+      #   uses: actions/attest-build-provenance@v2.3.0
+      #   with:
+      #     subject-name: docker.io/${{ env.REGISTRY_IMAGE }}
+      #     subject-digest: ${{ steps.push_stable.outputs.digest }}
+      #     push-to-registry: true
 
       - name: Upload tags
         if: ${{ steps.stablecheck.outputs.BUILD }}
