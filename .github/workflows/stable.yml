@@ -37,7 +37,7 @@ jobs:
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
-        if: ${{ github.repository_owner == 'clux' }}
+        if: ${{ github.repository_owner == 'cluxZZZ' }}
         with:
           username: clux
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -112,7 +112,7 @@ jobs:
           echo $RUST_VER > /tmp/tags/rust-ver
 
       - name: Tag and push
-        if: ${{ (steps.stablecheck.outputs.BUILD) && (github.repository_owner == 'clux') }}
+        if: ${{ (steps.stablecheck.outputs.BUILD) && (github.repository_owner == 'cluxZZZ') }}
         shell: bash
         run: |
           RUST_DATE=$(cat /tmp/tags/rust-date)
@@ -126,7 +126,7 @@ jobs:
 
       # TODO: want to do this, but need digest, which might not be trivial to get outside build-push-action
       # - name: Attest docker.io
-      #   if: ${{ steps.stablecheck.outputs.BUILD && (github.repository_owner == 'clux') }}
+      #   if: ${{ steps.stablecheck.outputs.BUILD && (github.repository_owner == 'cluxZZZ') }}
       #   uses: actions/attest-build-provenance@v2.3.0
       #   with:
       #     subject-name: docker.io/${{ env.REGISTRY_IMAGE }}
@@ -146,7 +146,7 @@ jobs:
   merge:
     name: 'Stable merge'
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'clux'
+    if: github.repository_owner == 'cluxZZZ'
     needs:
       - build
     steps:
