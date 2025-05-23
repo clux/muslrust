@@ -93,7 +93,7 @@ ARG SQLITE_VERSION="3.49.2"
 WORKDIR /src/sqlite
 RUN <<EOF
     # see product names and info at https://sqlite.org/download.html for why this line constructs the tarball name from a semver version
-    SQL_ID="$(awk -F. '{print $1}' <<< "${SQLITE_VERSION}")$(printf "%02d" $(awk -F. '{print $2}' <<< "${SQLITE_VERSION}"))$(printf "%02d" $(awk -F. '{print $3}' <<< "${SQLITE_VERSION}"))00"
+    SQL_ID="$(echo -n "${SQLITE_VERSION}" | xargs -d '.' printf '%d%02d%02d00')"
     curl -fsSL "https://www.sqlite.org/2025/sqlite-autoconf-${SQL_ID}.tar.gz" | tar -xz --strip-components=1
 
     export CC="musl-gcc -fPIC -pie"
