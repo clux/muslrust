@@ -169,6 +169,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create manifest list and push multi-platform images
+        shell: bash
         run: |
           RUST_DATE=$(cat /tmp/tags/rust-date)
           RUST_CHANNEL=$(cat /tmp/tags/rust-channel)
