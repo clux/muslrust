@@ -17,8 +17,29 @@ env:
   REGISTRY_IMAGE: clux/muslrust
 
 jobs:
+  check-stable:
+    name: 'Check if workflow should continue'
+    outputs:
+      CONTINUE_BUILD: ${{ steps.check-stable-tag.outputs.CONTINUE_BUILD }}
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v4
+      - name: 'Check if we need a new stable'
+        id: check-stable-tag
+        shell: bash
+        run: |
+          pip3 install --user toml
+          if python3 check_stable.py; then
+            echo 'Stable tag missing; running all build steps'
+            echo 'CONTINUE_BUILD=YES' >> "${GITHUB_OUTPUT}"
+          else
+            echo 'Stable tag found; skipping all build steps'
+          fi
+
   build:
     name: 'Stable Build'
+    needs: [check-stable]
+    if: ${{ needs.check-stable.outputs.CONTINUE_BUILD == 'YES' }}
     runs-on: 'ubuntu-latest'
     strategy:
       fail-fast: false
@@ -40,23 +61,6 @@ jobs:
         with:
           username: clux
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Check if we need a new stable
-        id: stablecheck
-        shell: bash
-        run: |
-          pip3 install --user toml
-          if python3 check_stable.py; then
-            echo "Stable tag missing; running all build steps"
-            echo "BUILD=YES" >> $GITHUB_OUTPUT
-          else
-            echo "Stable tag found; skipping all build steps"
-          fi
-
-      - name: Prepare
-        run: |
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -82,10 +86,8 @@ jobs:
           tags: rustmusl-temp
           build-args: |
             CHANNEL=stable
-        if: ${{ steps.stablecheck.outputs.BUILD }}
 
       - name: Run tests
-        if: ${{ steps.stablecheck.outputs.BUILD }}
         shell: bash
         run: |
           docker buildx build --platform ${{ matrix.platform }} --output type=docker -t test-runner - < Dockerfile.test-runner
@@ -98,7 +100,6 @@ jobs:
       # only identifiable by their digest and it appears docker does not let us select an image that way.
       # Not the most elegant, but it works.
       - name: Store tag info
-        if: ${{ steps.stablecheck.outputs.BUILD }}
         shell: bash
         run: |
           mkdir -p /tmp/tags
@@ -111,7 +112,6 @@ jobs:
           echo $RUST_VER > /tmp/tags/rust-ver
 
       - name: Tag and push
-        if: ${{ steps.stablecheck.outputs.BUILD }}
         shell: bash
         run: |
           RUST_DATE=$(cat /tmp/tags/rust-date)
@@ -125,7 +125,6 @@ jobs:
 
       # TODO: want to do this, but need digest, which might not be trivial to get outside build-push-action
       # - name: Attest docker.io
-      #   if: ${{ steps.stablecheck.outputs.BUILD }}
       #   uses: actions/attest-build-provenance@v2.3.0
       #   with:
       #     subject-name: docker.io/${{ env.REGISTRY_IMAGE }}
@@ -133,7 +132,6 @@ jobs:
       #     push-to-registry: true
 
       - name: Upload tags
-        if: ${{ steps.stablecheck.outputs.BUILD }}
         uses: actions/upload-artifact@v4
         with:
           name: tags-${{matrix.arch}}
@@ -148,21 +146,7 @@ jobs:
     needs:
       - build
     steps:
-      - uses: actions/checkout@v4
-      - name: Check if we need a new stable
-        id: stablecheck
-        shell: bash
-        run: |
-          pip3 install --user toml
-          if python3 check_stable.py; then
-            echo "Stable tag missing; running all build steps"
-            echo "BUILD=YES" >> $GITHUB_OUTPUT
-          else
-            echo "Stable tag found; skipping all build steps"
-          fi
-
       - name: Download tags
-        if: ${{ steps.stablecheck.outputs.BUILD }}
         uses: actions/download-artifact@v4
         with:
           path: /tmp/tags
@@ -185,19 +169,28 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create manifest list and push multi-platform images
-        if: ${{ steps.stablecheck.outputs.BUILD }}
+        shell: bash
         run: |
           RUST_DATE=$(cat /tmp/tags/rust-date)
           RUST_CHANNEL=$(cat /tmp/tags/rust-channel)
           RUST_VER=$(cat /tmp/tags/rust-ver)
 
-          for tag in ${RUST_CHANNEL} ${RUST_CHANNEL}-${RUST_DATE} ${RUST_VER}-${RUST_CHANNEL} ${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}; do
-            docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:$tag \
-              ${{ env.REGISTRY_IMAGE }}:amd64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE} \
-              ${{ env.REGISTRY_IMAGE }}:arm64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}
-            done
+          # The two already published image tags to associate additional tags to:
+          AMD64="${{ env.REGISTRY_IMAGE }}:amd64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}"
+          ARM64="${{ env.REGISTRY_IMAGE }}:arm64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}"
+
+          EXTRA_TAGS=(
+            "${RUST_CHANNEL}"
+            "${RUST_CHANNEL}-${RUST_DATE}"
+            "${RUST_VER}-${RUST_CHANNEL}"
+            "${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}"
+          )
+
+          # Assign each tag to the two source image tags:
+          for TAG in "${EXTRA_TAGS[@]}"; do
+            docker buildx imagetools create --tag "${{ env.REGISTRY_IMAGE }}:${TAG}" "${AMD64}" "${ARM64}"
+          done
 
       - name: Inspect image
-        if: ${{ steps.stablecheck.outputs.BUILD }}
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:latest
