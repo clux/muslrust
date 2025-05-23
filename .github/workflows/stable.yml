@@ -22,6 +22,7 @@ jobs:
     outputs:
       CONTINUE_BUILD: ${{ steps.check-stable-tag.outputs.CONTINUE_BUILD }}
     runs-on: 'ubuntu-latest'
+    steps:
       - uses: actions/checkout@v4
       - name: 'Check if we need a new stable'
         id: check-stable-tag
@@ -60,11 +61,6 @@ jobs:
         with:
           username: clux
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Prepare
-        run: |
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -178,11 +174,21 @@ jobs:
           RUST_CHANNEL=$(cat /tmp/tags/rust-channel)
           RUST_VER=$(cat /tmp/tags/rust-ver)
 
-          for tag in ${RUST_CHANNEL} ${RUST_CHANNEL}-${RUST_DATE} ${RUST_VER}-${RUST_CHANNEL} ${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}; do
-            docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:$tag \
-              ${{ env.REGISTRY_IMAGE }}:amd64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE} \
-              ${{ env.REGISTRY_IMAGE }}:arm64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}
-            done
+          # The two already published image tags to associate additional tags to:
+          AMD64="${{ env.REGISTRY_IMAGE }}:amd64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}"
+          ARM64="${{ env.REGISTRY_IMAGE }}:arm64-${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}"
+
+          EXTRA_TAGS=(
+            "${RUST_CHANNEL}"
+            "${RUST_CHANNEL}-${RUST_DATE}"
+            "${RUST_VER}-${RUST_CHANNEL}"
+            "${RUST_VER}-${RUST_CHANNEL}-${RUST_DATE}"
+          )
+
+          # Assign each tag to the two source image tags:
+          for TAG in "${EXTRA_TAGS[@]}"; do
+            docker buildx imagetools create --tag "${{ env.REGISTRY_IMAGE }}:${TAG}" "${AMD64}" "${ARM64}"
+          done
 
       - name: Inspect image
         run: |
