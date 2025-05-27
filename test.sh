@@ -1,60 +1,73 @@
 #!/bin/bash
-set -ex
+set -ex -o pipefail
 
-docker_build() {
-  echo "Target dir: $TARGET_DIR"
-  echo "Platform: $PLATFORM"
+# Common vars:
+CRATE_NAME="${1}crate"
+CRATE_PATH="./test/${CRATE_NAME}"
+
+# Build and verify successful static compilation of a crate:
+function docker_build() {
+  echo "Target dir: ${TARGET_DIR}"
+  echo "Platform: ${PLATFORM}"
 
   # NB: add -vv to cargo build when debugging
-  local -r crate="$1"crate
-  docker run --rm \
-    -v "$PWD/test/${crate}:/volume" \
-    -v cargo-cache:/root/.cargo/registry \
-    -e RUST_BACKTRACE=1 \
+  docker run --rm -it \
+    --env RUST_BACKTRACE=1 \
+    --volume "${CRATE_PATH}:/volume" \
+    --volume cargo-cache:/opt/cargo/registry \
     --platform "${PLATFORM}" \
     rustmusl-temp \
     cargo build
 
-  cd "test/${crate}"
-
-  # Ideally we would use `ldd` but due to a qemu bug we can't :(
-  # See https://github.com/multiarch/qemu-user-static/issues/172
-  # Instead we use `file`.
-  docker run --rm \
-    -v "$PWD:/volume" \
-    -e RUST_BACKTRACE=1 \
+  # Verify the build artifact works and is statically linked:
+  # (A container is used for `ldd` so that a non-native platform can also be tested)
+  local CRATE_ARTIFACT="./target/${TARGET_DIR}/debug/${CRATE_NAME}"
+  docker run --rm -it \
+    --env RUST_BACKTRACE=1 \
+    --volume "${CRATE_PATH}:/volume" \
+    --workdir /volume \
     --platform "${PLATFORM}" \
     test-runner \
-    bash -c "cd volume; ./target/$TARGET_DIR/debug/${crate} && file ./target/$TARGET_DIR/debug/${crate} && file /volume/target/$TARGET_DIR/debug/${crate} 2>&1 | grep -qE 'static-pie linked|statically linked' && echo ${crate} is a static executable"
+    bash -ex -o pipefail -c "
+      '${CRATE_ARTIFACT}'
+      ldd '${CRATE_ARTIFACT}' 2>&1 \
+        | grep -qE 'not a dynamic|statically linked' \
+        && echo '${crate} is a static executable'
+    "
 }
 
-# Helper to check how ekidd/rust-musl-builder does it
-docker_build_ekidd() {
-  local -r crate="$1"crate
-  docker run --rm \
-    -v "$PWD/test/${crate}:/home/rust/src" \
-    -v cargo-cache:/home/rust/.cargo \
-    -e RUST_BACKTRACE=1 \
-    -it ekidd/rust-musl-builder:nightly \
+# Reference - Helpers to locally compare builds from alternative images (x86_64 arch only):
+# - `ekidd/rust-musl-builder`
+# - `golddranks/rust_musl_docker`
+function docker_build_ekidd() {
+  docker run --rm -it \
+    --env RUST_BACKTRACE=1 \
+    --volume "${CRATE_PATH}:/home/rust/src" \
+    --volume cargo-cache:/home/rust/.cargo \
+    ekidd/rust-musl-builder:nightly \
     cargo build -vv
-  cd "test/${crate}"
-  ./target/x86_64-unknown-linux-musl/debug/"${crate}"
-  ldd "target/x86_64-unknown-linux-musl/debug/${crate}" 2>&1 | grep -qE "not a dynamic|statically linked" && \
-    echo "${crate} is a static executable"
+
+    check_crate_build_locally
 }
 
-# Helper to check how golddranks/rust_musl_docker does it
-docker_build_golddranks() {
-  local -r crate="$1"crate
-  docker run --rm \
-    -v "$PWD/test/${crate}:/workdir" \
-    -e RUST_BACKTRACE=1 \
-    -it golddranks/rust_musl_docker:nightly-2017-10-03 \
+function docker_build_golddranks() {
+  docker run --rm -it \
+    --env RUST_BACKTRACE=1 \
+    --volume "${CRATE_PATH}:/workdir" \
+    golddranks/rust_musl_docker:nightly-2017-10-03 \
     cargo build -vv --target=x86_64-unknown-linux-musl
-  cd "test/${crate}"
-  ./target/x86_64-unknown-linux-musl/debug/"${crate}"
-  ldd "target/x86_64-unknown-linux-musl/debug/${crate}" 2>&1 | grep -qE "not a dynamic|statically linked" && \
-    echo "${crate} is a static executable"
+
+    check_crate_build_locally
 }
 
-docker_build "$1"
+# Verify the build artifact works and is statically linked:
+function check_crate_build_locally() {
+  local CRATE_ARTIFACT="${CRATE_PATH}/target/x86_64-unknown-linux-musl/debug/${CRATE_NAME}"
+
+  "${CRATE_ARTIFACT}"
+  ldd "${CRATE_ARTIFACT}" 2>&1 \
+    | grep -qE 'not a dynamic|statically linked' \
+    && echo "${CRATE_NAME} is a static executable"
+}
+
+docker_build
