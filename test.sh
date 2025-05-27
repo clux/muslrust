@@ -37,25 +37,16 @@ function docker_build() {
 }
 
 # Reference - Helpers to locally compare builds from alternative images (x86_64 arch only):
-# - `ekidd/rust-musl-builder`
-# - `golddranks/rust_musl_docker`
-function docker_build_ekidd() {
+# - https://github.com/emk/rust-musl-builder (ss1, abandoned)
+# - https://gitlab.com/rust_musl_docker/image (ss1, abandoned)
+# - https://github.com/BlackDex/rust-musl (active, supports ssl 3.X)
+function docker_build_other_image() {
   docker run --rm -it \
     --env RUST_BACKTRACE=1 \
     --volume "${CRATE_PATH}:/home/rust/src" \
     --volume cargo-cache:/home/rust/.cargo \
-    ekidd/rust-musl-builder:nightly \
+    blackdex/rust-musl:x86_64-musl-stable \
     cargo build -vv
-
-    check_crate_build_locally
-}
-
-function docker_build_golddranks() {
-  docker run --rm -it \
-    --env RUST_BACKTRACE=1 \
-    --volume "${CRATE_PATH}:/workdir" \
-    golddranks/rust_musl_docker:nightly-2017-10-03 \
-    cargo build -vv --target=x86_64-unknown-linux-musl
 
     check_crate_build_locally
 }
