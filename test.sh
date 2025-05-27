@@ -28,11 +28,11 @@ function docker_build() {
     --workdir /volume \
     --platform "${PLATFORM}" \
     test-runner \
-    bash -ex -o pipefail -c "
+    bash -ex -c "
       '${CRATE_ARTIFACT}'
       ldd '${CRATE_ARTIFACT}' 2>&1 \
         | grep -qE 'not a dynamic|statically linked' \
-        && echo '${crate} is a static executable'
+        && echo '${CRATE_NAME} is a static executable'
     "
 }
 
