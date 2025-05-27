@@ -11,7 +11,7 @@ function docker_build() {
   echo "Platform: ${PLATFORM}"
 
   # NB: add -vv to cargo build when debugging
-  docker run --rm -it \
+  docker run --rm \
     --env RUST_BACKTRACE=1 \
     --volume "${CRATE_PATH}:/volume" \
     --volume cargo-cache:/opt/cargo/registry \
@@ -22,7 +22,7 @@ function docker_build() {
   # Verify the build artifact works and is statically linked:
   # (A container is used for `ldd` so that a non-native platform can also be tested)
   local CRATE_ARTIFACT="./target/${TARGET_DIR}/debug/${CRATE_NAME}"
-  docker run --rm -it \
+  docker run --rm \
     --env RUST_BACKTRACE=1 \
     --volume "${CRATE_PATH}:/volume" \
     --workdir /volume \
