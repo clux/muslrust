@@ -33,7 +33,7 @@ jobs:
             target_dir: aarch64-unknown-linux-musl
     steps:
       - uses: actions/checkout@v4
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v3
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
