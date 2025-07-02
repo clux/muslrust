@@ -64,7 +64,8 @@ Removed Libraries;
 - `pq` has been removed in 2025. See [#81](https://github.com/clux/muslrust/issues/81)
 
 Consider [blackdex/rust-musl](https://github.com/BlackDex/rust-musl) for `openssl`, `curl` and `pq`.
-If you need them, you can temporarily add them back to your own image as per [this comment](https://github.com/clux/muslrust/issues/168#issuecomment-3027429098).
+
+If you need the old `openssl`/`pq`, you __can__ temporarily add them back to your own image as per [this comment](https://github.com/clux/muslrust/issues/168#issuecomment-3027429098).
 
 ## Developing
 
