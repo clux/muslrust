@@ -23,7 +23,7 @@ jobs:
       CONTINUE_BUILD: ${{ steps.check-stable-tag.outputs.CONTINUE_BUILD }}
     runs-on: 'ubuntu-latest'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 'Check if we need a new stable'
         id: check-stable-tag
         shell: bash
@@ -53,7 +53,7 @@ jobs:
             arch: arm64
             target_dir: aarch64-unknown-linux-musl
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: extractions/setup-just@v3
 
       - name: Login to DockerHub
