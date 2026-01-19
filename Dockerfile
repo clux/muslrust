@@ -42,7 +42,7 @@ EOF
 
 # Install a more recent release of protoc:
 # renovate: datasource=github-releases depName=protocolbuffers/protobuf versioning=semver-coerced
-ARG PB_VERSION="v33.2"
+ARG PB_VERSION="v33.4"
 RUN <<EOF
     if [[ ${DOCKER_TARGET_ARCH} == 'aarch64' ]]; then
       DOCKER_TARGET_ARCH=aarch_64
