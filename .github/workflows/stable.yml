@@ -151,7 +151,7 @@ jobs:
       - build
     steps:
       - name: Download tags
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: /tmp/tags
           pattern: tags-*
