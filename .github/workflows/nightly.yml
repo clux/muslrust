@@ -32,7 +32,7 @@ jobs:
             arch: arm64
             target_dir: aarch64-unknown-linux-musl
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: extractions/setup-just@v3
 
       - name: Login to DockerHub
