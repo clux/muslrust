@@ -110,7 +110,7 @@ jobs:
           docker push ${{ env.REGISTRY_IMAGE }}:$TAG_NAME
 
       - name: Upload tags
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: tags-${{matrix.arch}}
           path: /tmp/tags
