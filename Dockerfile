@@ -73,7 +73,7 @@ ENV CC=musl-gcc \
 # Build zlib
 FROM base AS build-zlib
 # renovate: datasource=github-releases depName=madler/zlib
-ARG ZLIB_VERSION="1.3.1"
+ARG ZLIB_VERSION="1.3.2"
 WORKDIR /src/zlib
 RUN <<EOF
     curl -fsSL "https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz" | tar -xz --strip-components=1
