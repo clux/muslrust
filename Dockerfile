@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG BASE_IMAGE=ubuntu:noble
+ARG BASE_IMAGE=ubuntu:resolute
 
 # Mapping ARM64 / AMD64 naming conventions to equivalent `uname -a` output (build target specific):
 FROM ${BASE_IMAGE} AS base-amd64
