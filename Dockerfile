@@ -35,6 +35,7 @@ RUN <<EOF
         autoconf \
         libtool \
         libprotobuf-dev \
+        xz-utils \
         unzip
 
     rm -rf /var/lib/apt/lists/*
