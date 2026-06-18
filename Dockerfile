@@ -28,6 +28,7 @@ RUN <<EOF
         make \
         cmake \
         g++ \
+        jq \
         curl \
         pkgconf \
         ca-certificates \
