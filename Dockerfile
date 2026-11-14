@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG BASE_IMAGE=ubuntu:noble
+ARG BASE_IMAGE=ubuntu:resolute
 
 # Mapping ARM64 / AMD64 naming conventions to equivalent `uname -a` output (build target specific):
 FROM ${BASE_IMAGE} AS base-amd64
@@ -35,6 +35,7 @@ RUN <<EOF
         autoconf \
         libtool \
         libprotobuf-dev \
+        xz-utils \
         unzip
 
     rm -rf /var/lib/apt/lists/*
@@ -42,7 +43,7 @@ EOF
 
 # Install a more recent release of protoc:
 # renovate: datasource=github-releases depName=protocolbuffers/protobuf versioning=semver-coerced
-ARG PB_VERSION="v34.0"
+ARG PB_VERSION="v36.2"
 RUN <<EOF
     if [[ ${DOCKER_TARGET_ARCH} == 'aarch64' ]]; then
       DOCKER_TARGET_ARCH=aarch_64
@@ -57,7 +58,7 @@ EOF
 
 # Install prebuilt sccache based on platform:
 # renovate: datasource=github-releases depName=mozilla/sccache
-ARG SCCACHE_VERSION="0.14.0"
+ARG SCCACHE_VERSION="0.19.0"
 RUN <<EOF
     ASSET_NAME="sccache-v${SCCACHE_VERSION}-${DOCKER_TARGET_ARCH}-unknown-linux-musl"
     curl -fsSL "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VERSION}/${ASSET_NAME}.tar.gz" \
@@ -73,7 +74,7 @@ ENV CC=musl-gcc \
 # Build zlib
 FROM base AS build-zlib
 # renovate: datasource=github-releases depName=madler/zlib
-ARG ZLIB_VERSION="1.3.2"
+ARG ZLIB_VERSION="1.4"
 WORKDIR /src/zlib
 RUN <<EOF
     curl -fsSL "https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz" | tar -xz --strip-components=1
