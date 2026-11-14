@@ -77,7 +77,7 @@ FROM base AS build-zlib
 ARG ZLIB_VERSION="1.3.2"
 WORKDIR /src/zlib
 RUN <<EOF
-    curl -fsSL "https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz" | tar -xz --strip-components=1
+    curl -fsSL "https://zlib.net/fossils/zlib-${ZLIB_VERSION}.tar.gz" | tar -xz --strip-components=1
 
     export CC="musl-gcc -fPIC -pie"
     export CFLAGS="-I${PREFIX}/include"
