@@ -58,7 +58,7 @@ EOF
 
 # Install prebuilt sccache based on platform:
 # renovate: datasource=github-releases depName=mozilla/sccache
-ARG SCCACHE_VERSION="0.19.0"
+ARG SCCACHE_VERSION="0.20.1"
 RUN <<EOF
     ASSET_NAME="sccache-v${SCCACHE_VERSION}-${DOCKER_TARGET_ARCH}-unknown-linux-musl"
     curl -fsSL "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VERSION}/${ASSET_NAME}.tar.gz" \
